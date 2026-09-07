@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   POMELO TRACE — Global Design System
+   Theme: Deep Soil × Citrus Fire × Organic Light
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* Core palette */
+  --color-soil-deep:    #180b04;
+  --color-soil-base:    #2c1508;
+  --color-soil-mid:     #4a260c;
+  --color-soil-warm:    #6e3812;
+  --color-bark-tan:     #9e7a50;
+  --color-bark-light:   #dacdb8;
+
+  --color-citrus-hot:   #f98208;
+  --color-citrus-gold:  #ffa720;
+  --color-citrus-light: #ffdb84;
+
+  --color-pomelo-pink:  #f83b3b;
+  --color-pomelo-coral: #ff6b6b;
+
+  --color-lime-vivid:   #7fe030;
+  --color-lime-fresh:   #5ec412;
+  --color-lime-dark:    #36770d;
+
+  --color-cream:        #fdf6f0;
+  --color-parchment:    #f0e4d0;
+
+  /* Semantic surfaces */
+  --surface-primary:    var(--color-soil-base);
+  --surface-raised:     var(--color-soil-mid);
+  --surface-overlay:    rgba(255,167,32,0.06);
+
+  /* Typography scale */
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-display: 'Cormorant SC', 'Cormorant Garamond', serif;
+  --font-mono:    'IBM Plex Mono', Menlo, monospace;
+  --font-body:    'Jost', system-ui, sans-serif;
+
+  /* Transitions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Base Reset ─────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-soil-base);
+  color: var(--color-cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar styling ──────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-soil-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bark-tan);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-citrus-gold);
+}
+
+/* ── Typography Utilities ───────────────────────────── */
+.font-heading  { font-family: var(--font-heading); }
+.font-display  { font-family: var(--font-display); }
+.font-mono     { font-family: var(--font-mono); }
+.font-body     { font-family: var(--font-body); }
+
+/* ── Topographic Background ─────────────────────────── */
+.bg-topo {
+  background-image:
+    radial-gradient(ellipse at 15% 50%, rgba(249,130,8,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(248,59,59,0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cpath d='M0 100 Q50 60 100 100 Q150 140 200 100' stroke='%23ffffff06' fill='none' stroke-width='1.5'/%3E%3Cpath d='M0 70 Q50 30 100 70 Q150 110 200 70' stroke='%23ffffff04' fill='none' stroke-width='1'/%3E%3Cpath d='M0 130 Q50 90 100 130 Q150 170 200 130' stroke='%23ffffff04' fill='none' stroke-width='1'/%3E%3Cpath d='M0 40 Q50 0 100 40 Q150 80 200 40' stroke='%23ffffff03' fill='none' stroke-width='1'/%3E%3Cpath d='M0 160 Q50 120 100 160 Q150 200 200 160' stroke='%23ffffff03' fill='none' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: auto, auto, 200px 200px;
+}
+
+/* ── Citrus Orb (decorative blob) ───────────────────── */
+.citrus-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: orb-drift 8s ease-in-out infinite;
+}
+
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -15px) scale(1.05); }
+  66% { transform: translate(-10px, 20px) scale(0.95); }
+}
+
+/* ── Glass Card ─────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+}
+
+.glass-card-warm {
+  background: rgba(249, 130, 8, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(249, 130, 8, 0.15);
+  border-radius: 1.5rem;
+}
+
+.glass-card-danger {
+  background: rgba(248, 59, 59, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(248, 59, 59, 0.25);
+  border-radius: 1.5rem;
+}
+
+/* ── Timeline connector ─────────────────────────────── */
+.timeline-line {
+  background: linear-gradient(to bottom, #ffa72060, #5ec41260);
+  width: 2px;
+}
+
+/* ── Citrus badge glow ──────────────────────────────── */
+.badge-citrus {
+  background: linear-gradient(135deg, #f98208, #ffa720);
+  box-shadow: 0 2px 16px #f9820860, 0 0 0 1px #ffa72040;
+}
+
+.badge-lime {
+  background: linear-gradient(135deg, #5ec412, #7fe030);
+  box-shadow: 0 2px 16px #5ec41260, 0 0 0 1px #7fe03040;
+}
+
+.badge-danger {
+  background: linear-gradient(135deg, #c11313, #f83b3b);
+  box-shadow: 0 2px 16px #f83b3b60, 0 0 0 1px #f83b3b40;
+  animation: danger-pulse 2s ease-in-out infinite;
+}
+
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 2px 16px #f83b3b60, 0 0 0 1px #f83b3b40; }
+  50% { box-shadow: 0 2px 32px #f83b3b90, 0 0 0 3px #f83b3b30; }
+}
+
+/* ── Sidebar navigation ─────────────────────────────── */
+.sidebar-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: rgba(253, 246, 240, 0.55);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover {
+  color: var(--color-cream);
+  background: rgba(255, 167, 32, 0.08);
+}
+
+.sidebar-nav-item.active {
+  color: var(--color-citrus-gold);
+  background: rgba(255, 167, 32, 0.12);
+}
+
+.sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: linear-gradient(to bottom, var(--color-citrus-hot), var(--color-citrus-gold));
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── Data table cells ───────────────────────────────── */
+.data-table th {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-bark-tan);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.data-table td {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--color-bark-light);
+  vertical-align: middle;
+}
+
+.data-table tr:hover td {
+  background: rgba(255, 167, 32, 0.04);
+}
+
+/* ── AI Scan shimmer ────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--color-citrus-gold) 0%,
+    var(--color-cream) 30%,
+    var(--color-citrus-hot) 60%,
+    var(--color-citrus-gold) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* ── Status indicator dot ───────────────────────────── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.healthy { background: #7fe030; box-shadow: 0 0 8px #7fe03080; }
+.status-dot.warning { background: #ffa720; box-shadow: 0 0 8px #ffa72080; }
+.status-dot.danger  { background: #f83b3b; box-shadow: 0 0 8px #f83b3b80; animation: danger-pulse-dot 1.5s ease-in-out infinite; }
+
+@keyframes danger-pulse-dot {
+  0%, 100% { box-shadow: 0 0 8px #f83b3b80; }
+  50% { box-shadow: 0 0 16px #f83b3bcc, 0 0 24px #f83b3b40; }
+}
+
+/* ── QR page specific ───────────────────────────────── */
+.qr-hero-bg {
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(249,130,8,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 80% 60%, rgba(248,59,59,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 10% 80%, rgba(94,196,18,0.08) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Ccircle cx='150' cy='150' r='100' stroke='%23ffa72008' fill='none' stroke-width='1'/%3E%3Ccircle cx='150' cy='150' r='120' stroke='%23ffa72005' fill='none' stroke-width='1'/%3E%3Ccircle cx='150' cy='150' r='140' stroke='%23ffa72003' fill='none' stroke-width='1'/%3E%3Cpath d='M50 150 Q100 50 150 150 Q200 250 250 150' stroke='%23ffffff05' fill='none' stroke-width='1'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #2c1508 0%, #180b04 100%);
+  background-size: auto, auto, auto, 300px 300px, auto;
+}
+
+/* ── Fingerprint / authentic stamp ─────────────────── */
+.authentic-stamp {
+  border: 2px solid rgba(255, 167, 32, 0.3);
+  border-radius: 50%;
+  position: relative;
+}
+
+.authentic-stamp::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 167, 32, 0.2);
+  animation: spin-slow 20s linear infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Recharts overrides ─────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(42, 29, 22, 0.95) !important;
+  border: 1px solid rgba(255, 167, 32, 0.2) !important;
+  border-radius: 0.5rem !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.75rem !important;
+}
+
+.recharts-cartesian-grid line {
+  stroke: rgba(255, 255, 255, 0.05) !important;
+}
