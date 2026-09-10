@@ -4,7 +4,7 @@
 //  MOBILE-FIRST — field-accessible from smartphones
 // ════════════════════════════════════════════════════════
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
@@ -32,6 +32,11 @@ import {
   updateFarmSettings,
   fetchAIAlerts,
   fetchTreeBatches,
+  addTreeBatch,
+  fetchBatchDetail,
+  analyzeLeafPhoto,
+  fetchFarmNotifications,
+  markAllNotificationsRead,
 } from '../services/treeService'
 
 
@@ -63,13 +68,13 @@ function QRCodeModal({ batch, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm"
           onClick={onClose}
         />
 
@@ -78,69 +83,574 @@ function QRCodeModal({ batch, onClose }) {
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative z-10 w-full max-w-sm glass-card-warm p-6 rounded-3xl text-center border border-[#ffa720]/30 shadow-2xl print-area"
+          className="relative z-10 w-full max-w-sm max-h-[90vh] flex flex-col glass-card-warm rounded-3xl border border-[#ffa720]/40 shadow-2xl print-area overflow-hidden"
         >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-xl glass-card text-[#9e7a50] hover:text-white transition-colors no-print min-h-[44px] min-w-[44px] flex items-center justify-center"
-          >
-            <X size={18} />
-          </button>
-
-          <div className="w-12 h-12 rounded-2xl badge-citrus flex items-center justify-center mx-auto mb-3">
-            <QrCode size={24} className="text-white" />
+          {/* Pinned Header */}
+          <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-white/[0.08] bg-black/20">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl btn-action-green flex items-center justify-center shadow-md flex-shrink-0">
+                <QrCode size={20} className="text-white" />
+              </div>
+              <div className="text-left">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-[#ffa720] font-bold block">
+                  Label Lacak Balak
+                </span>
+                <h3 className="font-heading text-xl font-bold text-[#fdf6f0] leading-tight">
+                  {batch.id}
+                </h3>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl glass-card text-[#dacdb8] hover:text-white transition-colors no-print min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer flex-shrink-0"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          <span className="font-mono text-[9px] uppercase tracking-widest text-[#ffa720]">
-            Label Lacak Balak
-          </span>
-          <h3 className="font-heading text-2xl font-bold text-[#fdf6f0] mt-0.5 mb-1">
-            {batch.id}
-          </h3>
-          <p className="font-body text-xs text-[#dacdb8]/70 mb-5">
-            {batch.variety} · {batch.location} ({batch.count} Pohon)
-          </p>
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-center">
+            <p className="font-body text-sm font-semibold text-[#dacdb8] mb-3">
+              {batch.variety} · {batch.location} ({batch.count} Pohon)
+            </p>
 
-          {/* QR Container */}
-          <div className="bg-white p-4 rounded-2xl inline-block shadow-inner mx-auto mb-5 border-4 border-[#ffa720]/20">
-            <QRCodeSVG value={targetUrl} size={180} level="H" includeMargin={true} />
+            {/* QR Container */}
+            <div className="bg-white p-3.5 rounded-2xl inline-block shadow-inner mx-auto mb-3 border-4 border-[#ffa720]/40">
+              <QRCodeSVG value={targetUrl} size={150} level="H" includeMargin={true} />
+            </div>
+
+            <div className="font-mono text-xs text-[#dacdb8] break-all bg-black/40 p-2.5 rounded-xl border border-white/[0.1] mb-2 font-semibold">
+              {targetUrl}
+            </div>
+
+            <a
+              href={`/trace/${batch.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-mono text-xs text-[#ffa720] font-bold uppercase tracking-wider hover:underline no-print py-1 min-h-[36px]"
+            >
+              Buka Halaman Publik <ExternalLink size={13} />
+            </a>
           </div>
 
-          <div className="font-mono text-[9px] text-[#9e7a50] break-all bg-white/[0.04] p-2 rounded-xl border border-white/[0.06] mb-5">
-            {targetUrl}
-          </div>
-
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 no-print">
+          {/* Pinned Footer */}
+          <div className="flex-shrink-0 p-3.5 sm:p-4 bg-black/40 border-t border-white/[0.1] grid grid-cols-2 gap-2.5 no-print">
             <button
               onClick={handleCopy}
-              className="glass-card py-2.5 px-3 rounded-xl font-mono text-[10px] uppercase tracking-wider text-[#dacdb8] hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
+              className="glass-card py-2.5 px-3 rounded-xl font-body text-sm font-bold tracking-wider text-[#dacdb8] hover:text-white hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
             >
-              <Copy size={13} /> {copied ? 'Tersalin!' : 'Salin Link'}
+              <Copy size={16} /> {copied ? 'Tersalin!' : 'Salin Link'}
             </button>
 
             <button
               onClick={handlePrint}
-              className="badge-citrus py-2.5 px-3 rounded-xl font-mono text-[10px] uppercase tracking-wider text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 min-h-[44px]"
+              className="btn-action-green py-2.5 px-3 rounded-xl font-body text-sm font-bold tracking-wider text-white shadow-lg flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
             >
-              <Printer size={13} /> Cetak QR
+              <Printer size={16} /> Cetak QR
             </button>
           </div>
-
-          <a
-            href={`/trace/${batch.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-mono text-[9px] text-[#ffa720] uppercase tracking-wider mt-4 hover:underline no-print"
-          >
-            Buka Halaman Publik <ExternalLink size={10} />
-          </a>
         </motion.div>
       </div>
     </AnimatePresence>
   )
 }
+
+// ── Batch Detail Modal Component ──────────────────────────
+function BatchDetailModal({ batch, onClose, onOpenQr }) {
+  const [detail, setDetail] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (batch?.id) {
+      fetchBatchDetail(batch.id).then(res => {
+        setDetail(res)
+        setLoading(false)
+      })
+    }
+  }, [batch])
+
+  if (!batch) return null
+
+  const pct = detail ? Math.round((detail.healthy / detail.count) * 100) : 100
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative z-10 w-full max-w-2xl max-h-[88vh] flex flex-col glass-card-warm rounded-3xl border border-[#ffa720]/40 shadow-2xl overflow-hidden"
+        >
+          {/* Pinned Header */}
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-white/[0.08] bg-black/20">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-2xl btn-action-yellow flex items-center justify-center shadow-lg p-2.5 flex-shrink-0">
+                <TreePine size={24} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <span className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold block">
+                  Detail Batch Pohon
+                </span>
+                <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#fdf6f0] truncate">
+                  {batch.id}
+                </h2>
+                <div className="font-body text-sm font-semibold text-[#dacdb8] truncate">
+                  {batch.variety} · {batch.location}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-xl glass-card text-[#dacdb8] hover:text-white transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer flex-shrink-0"
+              aria-label="Tutup modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {/* Stat Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="glass-card p-3 rounded-xl text-center">
+                <div className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">{batch.count}</div>
+                <div className="font-mono text-[11px] sm:text-xs text-[#dacdb8] uppercase font-bold">Total Pohon</div>
+              </div>
+              <div className="glass-card p-3 rounded-xl text-center border border-emerald-500/30">
+                <div className="font-heading text-xl sm:text-2xl font-bold text-emerald-400">{batch.healthy}</div>
+                <div className="font-mono text-[11px] sm:text-xs text-emerald-300 uppercase font-bold">Sehat</div>
+              </div>
+              <div className="glass-card p-3 rounded-xl text-center border border-red-500/30">
+                <div className="font-heading text-xl sm:text-2xl font-bold text-red-400">{batch.flagged}</div>
+                <div className="font-mono text-[11px] sm:text-xs text-red-300 uppercase font-bold">Terdeteksi</div>
+              </div>
+              <div className="glass-card p-3 rounded-xl text-center border border-[#ffa720]/30">
+                <div className="font-heading text-xl sm:text-2xl font-bold text-[#ffa720]">{pct}%</div>
+                <div className="font-mono text-[11px] sm:text-xs text-[#ffa720] uppercase font-bold">Integritas</div>
+              </div>
+            </div>
+
+            {/* Planted & Location Details */}
+            <div className="glass-card p-4 rounded-2xl space-y-2 border border-white/[0.08]">
+              <div className="flex items-center justify-between font-mono text-xs sm:text-sm">
+                <span className="text-[#dacdb8]">Tanggal Tanam:</span>
+                <span className="text-[#fdf6f0] font-bold">{batch.plantedDate || '12 Mar 2022'}</span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-xs sm:text-sm">
+                <span className="text-[#dacdb8]">Sistem Irigasi:</span>
+                <span className="text-[#fdf6f0] font-bold">Irigasi Tetes Otomatis (Mata Air Lawu)</span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-xs sm:text-sm">
+                <span className="text-[#dacdb8]">Sertifikasi Organik:</span>
+                <span className="text-emerald-400 font-bold">✓ Terverifikasi Standar Desa Bibis</span>
+              </div>
+            </div>
+
+            {/* Sample trees list */}
+            <div>
+              <div className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold mb-2 flex items-center justify-between">
+                <span>Sampel Pohon Terdaftar</span>
+                <span className="text-[#dacdb8] font-normal text-xs">Menampilkan {detail?.sampleTrees?.length || 0} sampel</span>
+              </div>
+              <div className="space-y-2">
+                {loading ? (
+                  <div className="text-center py-6 text-[#dacdb8] font-mono text-xs">Memuat data pohon...</div>
+                ) : (
+                  detail?.sampleTrees?.map(t => (
+                    <div key={t.code} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className={`status-dot ${t.status === 'flagged' ? 'danger' : 'healthy'}`} style={{ width: 10, height: 10 }} />
+                        <span className="font-mono font-bold text-[#fdf6f0]">{t.code}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs text-[#dacdb8] hidden sm:inline">Scan: {t.lastScan}</span>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono ${
+                          t.status === 'flagged' ? 'badge-danger text-white' : 'badge-lime text-white'
+                        }`}>
+                          {t.health}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Pinned Footer */}
+          <div className="flex-shrink-0 p-4 sm:p-5 bg-black/40 border-t border-white/[0.1] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <a
+              href={`/trace/${batch.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 font-mono text-xs uppercase font-bold text-[#ffa720] hover:underline px-4 py-2.5 rounded-xl border border-[#ffa720]/40 min-h-[44px]"
+            >
+              Lihat di Halaman Publik <ExternalLink size={15} />
+            </a>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => onOpenQr(batch)}
+                className="btn-action-yellow text-black font-bold text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-initial cursor-pointer"
+              >
+                <QrCode size={18} /> Label QR
+              </button>
+              <button
+                onClick={onClose}
+                className="btn-action-red text-white font-bold text-sm px-5 py-2.5 rounded-xl min-h-[44px] cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
+
+// ── Add Batch Modal Component ─────────────────────────────
+function AddBatchModal({ onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    id: `Batch-${new Date().getFullYear()}-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`,
+    count: 20,
+    location: 'Blok Utara',
+    variety: 'Jeruk Bali Merah',
+    plantedDate: new Date().toISOString().split('T')[0]
+  })
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    await addTreeBatch(formData)
+    setSubmitting(false)
+    onSuccess()
+    onClose()
+  }
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative z-10 w-full max-w-md max-h-[90vh] flex flex-col glass-card-warm rounded-3xl border border-[#ffa720]/30 shadow-2xl overflow-hidden"
+        >
+          {/* Pinned Header */}
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-white/[0.08] bg-black/20">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl btn-action-green flex items-center justify-center shadow-md flex-shrink-0">
+                <TreePine size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">Tambah Batch Pohon</h3>
+                <p className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold">Registrasi Blok Baru</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl glass-card text-[#dacdb8] hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-8 space-y-4">
+              <div>
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  ID / Kode Batch
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.id}
+                  onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                    Lokasi Blok
+                  </label>
+                  <select
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-3 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                  >
+                    <option value="Blok Utara">Blok Utara</option>
+                    <option value="Blok Timur">Blok Timur</option>
+                    <option value="Blok Selatan">Blok Selatan</option>
+                    <option value="Blok Barat">Blok Barat</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                    Jumlah Pohon
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={formData.count}
+                    onChange={(e) => setFormData({ ...formData, count: e.target.value })}
+                    className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-3 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  Varietas Tanaman
+                </label>
+                <select
+                  value={formData.variety}
+                  onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                >
+                  <option value="Jeruk Bali Merah">Jeruk Bali Merah (Unggulan)</option>
+                  <option value="Jeruk Bali Putih">Jeruk Bali Putih</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  Tanggal Tanam
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.plantedDate}
+                  onChange={(e) => setFormData({ ...formData, plantedDate: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                />
+              </div>
+            </div>
+
+            {/* Pinned Footer */}
+            <div className="flex-shrink-0 p-4 sm:p-5 bg-black/40 border-t border-white/[0.1] flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-action-red px-5 py-2.5 rounded-xl font-body text-base font-bold text-white min-h-[44px] cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-action-green px-6 py-2.5 rounded-xl font-body text-base font-bold text-white flex items-center gap-2 min-h-[44px] cursor-pointer"
+              >
+                <Plus size={18} /> {submitting ? 'Menyimpan...' : 'Simpan Batch'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
+
+// ── AI Alert Detail Modal Component ───────────────────────
+function AIAlertDetailModal({ alert, onClose }) {
+  if (!alert) return null
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative z-10 w-full max-w-lg max-h-[88vh] flex flex-col glass-card-warm rounded-3xl border border-[#ffa720]/40 shadow-2xl overflow-hidden"
+        >
+          {/* Pinned Header */}
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-white/[0.08] bg-black/20">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg p-2.5 flex-shrink-0 ${
+                alert.severity === 'high' ? 'bg-red-950/80 border-2 border-red-500 text-red-400' :
+                alert.severity === 'medium' ? 'bg-amber-950/80 border-2 border-amber-500 text-amber-400' :
+                'bg-emerald-950/80 border-2 border-emerald-500 text-emerald-400'
+              }`}>
+                <AlertTriangle size={26} />
+              </div>
+              <div className="min-w-0">
+                <span className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold block">
+                  Laporan Deteksi MobileNetV2 · {alert.id}
+                </span>
+                <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0] truncate">
+                  {alert.disease}
+                </h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="font-mono text-xs text-[#dacdb8] font-semibold">{alert.batch}</span>
+                  <span className="font-mono text-xs text-[#dacdb8]">· {alert.time}</span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl glass-card text-[#dacdb8] hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {/* Confidence badge */}
+            <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.1] flex items-center justify-between">
+              <div>
+                <div className="font-mono text-xs uppercase text-[#dacdb8] font-bold">Skor Keyakinan AI</div>
+                <div className="font-heading text-xl font-bold text-[#fdf6f0]">{alert.confidence}%</div>
+              </div>
+              <SeverityBadge level={alert.severity} />
+            </div>
+
+            {/* Symptoms */}
+            <div className="glass-card p-4 rounded-2xl border border-white/[0.08]">
+              <div className="font-mono text-xs uppercase text-[#ffa720] font-bold mb-1">
+                Gejala Klinis Terdeteksi
+              </div>
+              <p className="font-body text-sm sm:text-base text-[#fdf6f0] leading-relaxed">
+                {alert.symptoms || 'Bercak abnormal pada permukaan helai daun dengan pola klorosis khas.'}
+              </p>
+            </div>
+
+            {/* SOP Advisory */}
+            <div className="p-4 rounded-2xl bg-amber-950/30 border border-[#ffa720]/30">
+              <div className="font-mono text-xs uppercase text-[#ffa720] font-bold mb-1">
+                SOP Rekomendasi Tindakan Kebun
+              </div>
+              <p className="font-body text-sm sm:text-base text-[#dacdb8] leading-relaxed">
+                {alert.advisory || 'Lakukan sanitasi kebun, isolasi pohon yang terindikasi agar tidak menular ke baris lain, serta laporkan ke koordinator POPT setempat.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Pinned Footer */}
+          <div className="flex-shrink-0 p-4 sm:p-5 bg-black/40 border-t border-white/[0.1] flex justify-end">
+            <button
+              onClick={onClose}
+              className="btn-action-green font-bold text-base px-6 py-2.5 rounded-xl min-h-[44px] text-white cursor-pointer"
+            >
+              Tutup Rincian
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
+
+// ── Notification Flyout Component ─────────────────────────
+function NotificationFlyout({ onClose, onClearAll }) {
+  const [notifs, setNotifs] = useState([])
+
+  useEffect(() => {
+    fetchFarmNotifications().then(setNotifs)
+  }, [])
+
+  const handleClear = async () => {
+    await markAllNotificationsRead()
+    const updated = await fetchFarmNotifications()
+    setNotifs(updated)
+    if (onClearAll) onClearAll()
+  }
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-16 sm:pr-8 pointer-events-none">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 pointer-events-auto"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+          className="relative z-10 w-full max-w-sm max-h-[85vh] flex flex-col glass-card-warm p-5 rounded-3xl border border-[#ffa720]/40 shadow-2xl pointer-events-auto overflow-hidden"
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-white/[0.1] flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Bell size={18} className="text-[#ffa720]" />
+              <h3 className="font-heading text-lg font-bold text-[#fdf6f0]">Pemberitahuan Kebun</h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-[#dacdb8] hover:text-white rounded-lg cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 py-2">
+            {notifs.map(n => (
+              <div
+                key={n.id}
+                className={`p-3 rounded-xl border text-left text-xs ${
+                  n.type === 'danger' ? 'bg-red-950/40 border-red-500/40' :
+                  n.type === 'warning' ? 'bg-amber-950/30 border-amber-500/40' :
+                  'bg-white/[0.04] border-white/[0.08]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="font-bold text-[#fdf6f0] text-sm">{n.title}</span>
+                  {n.unread && (
+                    <span className="w-2 h-2 rounded-full bg-[#ffa720] shrink-0" />
+                  )}
+                </div>
+                <p className="text-[#dacdb8] leading-relaxed">{n.desc}</p>
+                <span className="font-mono text-[10px] text-[#dacdb8]/70 block mt-1.5">{n.time}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.1] flex items-center justify-between flex-shrink-0">
+            <button
+              onClick={handleClear}
+              className="text-xs font-mono font-bold text-[#ffa720] hover:underline cursor-pointer min-h-[40px] flex items-center"
+            >
+              Tandai Semua Dibaca
+            </button>
+            <button
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-lg bg-white/[0.08] text-xs font-mono font-bold text-[#dacdb8] hover:text-white cursor-pointer min-h-[40px] flex items-center"
+            >
+              Tutup
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
+
 
 
 // ── Animation variants ────────────────────────────────────
@@ -198,19 +708,19 @@ function StatCard({ stat }) {
       />
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
-          {/* min 44px touch target for icon area */}
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center"
-            style={{ background: `${stat.accent}15`, border: `1px solid ${stat.accent}25` }}
+          {/* min 48px touch target for icon area */}
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center"
+            style={{ background: `${stat.accent}25`, border: `1.5px solid ${stat.accent}50` }}
           >
-            <Icon size={18} style={{ color: stat.accent }} />
+            <Icon size={22} style={{ color: stat.accent }} />
           </div>
-          <div className="flex items-center" style={{ color: stat.trend === 'up' ? '#7fe030' : '#f83b3b' }}>
-            {stat.trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          <div className="flex items-center font-bold" style={{ color: stat.trend === 'up' ? '#4ade80' : '#f87171' }}>
+            {stat.trend === 'up' ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
           </div>
         </div>
-        <div className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0] mb-0.5">{stat.value}</div>
-        <div className="font-body text-sm text-[#9e7a50]/80 mb-0.5">{stat.label}</div>
-        <div className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50]/50 tracking-wide uppercase">{stat.sub}</div>
+        <div className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0] mb-1">{stat.value}</div>
+        <div className="font-body text-base font-bold text-[#fdf6f0] mb-0.5">{stat.label}</div>
+        <div className="font-mono text-xs font-semibold text-[#dacdb8] tracking-wide uppercase">{stat.sub}</div>
       </div>
     </motion.div>
   )
@@ -218,16 +728,18 @@ function StatCard({ stat }) {
 
 function SeverityBadge({ level }) {
   const cfg = {
-    high:   { label: 'TINGGI', bg: 'rgba(248,59,59,0.15)',   border: 'rgba(248,59,59,0.3)',   text: '#ff6b6b' },
-    medium: { label: 'SEDANG', bg: 'rgba(249,130,8,0.15)',   border: 'rgba(249,130,8,0.3)',   text: '#ffa720' },
-    low:    { label: 'RENDAH', bg: 'rgba(127,224,48,0.12)',  border: 'rgba(127,224,48,0.25)', text: '#7fe030' },
+    high:   { short: 'TINGGI', full: 'TINGGI (BAHAYA)', bg: 'rgba(239,68,68,0.25)',   border: 'rgba(239,68,68,0.7)',   text: '#fca5a5' },
+    medium: { short: 'SEDANG', full: 'SEDANG (HATI-HATI)', bg: 'rgba(245,158,11,0.25)', border: 'rgba(245,158,11,0.7)', text: '#fde68a' },
+    low:    { short: 'RENDAH', full: 'RENDAH (AMAN)', bg: 'rgba(34,197,94,0.22)',   border: 'rgba(34,197,94,0.7)',   text: '#86efac' },
   }
-  const c = cfg[level]
+  const c = cfg[level] || cfg.low
   return (
-    <span className="font-mono text-[8px] uppercase tracking-[0.1em] px-2 py-0.5 rounded-md flex-shrink-0"
-      style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}
+    <span
+      className="font-mono text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg flex-shrink-0 whitespace-nowrap"
+      style={{ background: c.bg, border: `1.5px solid ${c.border}`, color: c.text }}
     >
-      {c.label}
+      <span className="sm:hidden">{c.short}</span>
+      <span className="hidden sm:inline">{c.full}</span>
     </span>
   )
 }
@@ -254,23 +766,23 @@ function SidebarContent({ location, onNavClick, farmSettings }) {
       <div className="flex items-center gap-3 px-5 py-5 sm:py-6 border-b border-white/[0.06] shrink-0">
         <PomeloMark />
         <div>
-          <div className="font-display text-base tracking-[0.06em] text-[#ffa720]">POMELO TRACE</div>
-          <div className="font-mono text-[8px] text-[#9e7a50] tracking-widest uppercase">Admin Dashboard</div>
+          <div className="font-display text-lg tracking-[0.06em] text-[#ffa720] font-bold">POMELO TRACE</div>
+          <div className="font-mono text-xs text-[#dacdb8] tracking-widest uppercase font-semibold">Admin Dashboard</div>
         </div>
       </div>
 
       {/* Farm context chip */}
-      <div className="px-4 py-3 mx-3 mt-4 rounded-xl shrink-0"
-        style={{ background: 'rgba(249,130,8,0.07)', border: '1px solid rgba(249,130,8,0.12)' }}
+      <div className="px-4 py-3.5 mx-3 mt-4 rounded-2xl shrink-0"
+        style={{ background: 'rgba(249,130,8,0.12)', border: '1px solid rgba(249,130,8,0.25)' }}
       >
-        <div className="font-mono text-[8px] uppercase tracking-widest text-[#9e7a50] mb-0.5">Lokasi Kebun</div>
-        <div className="font-body text-sm text-[#dacdb8] font-medium truncate">{farmName}</div>
-        <div className="font-mono text-[8px] text-[#9e7a50]/60 mt-0.5">{farmSettings?.totalTrees || 88} pohon aktif</div>
+        <div className="font-mono text-xs uppercase tracking-widest text-[#ffa720] font-bold mb-1">Lokasi Kebun</div>
+        <div className="font-body text-base text-[#fdf6f0] font-bold truncate">{farmName}</div>
+        <div className="font-mono text-xs text-[#dacdb8] mt-1 font-medium">{farmSettings?.totalTrees || 88} pohon aktif</div>
       </div>
 
       {/* Navigation — flex-1 + overflow-y-auto for long nav lists */}
-      <nav className="flex-1 px-3 mt-4 space-y-0.5 overflow-y-auto">
-        <div className="font-mono text-[8px] uppercase tracking-[0.18em] text-[#9e7a50]/50 px-3 mb-2">
+      <nav className="flex-1 px-3 mt-4 space-y-1.5 overflow-y-auto">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-[#dacdb8] px-3 mb-2 font-bold">
           Menu Utama
         </div>
         {NAV_ITEMS.map(({ path, icon: Icon, label, exact }) => {
@@ -279,16 +791,16 @@ function SidebarContent({ location, onNavClick, farmSettings }) {
             <Link
               key={path}
               to={path}
-              /* min-h-[48px] for comfortable mobile touch targets */
-              className={`sidebar-nav-item min-h-[48px] ${active ? 'active' : ''}`}
+              /* min-h-[52px] for comfortable touch targets */
+              className={`sidebar-nav-item min-h-[52px] text-base font-semibold ${active ? 'active' : ''}`}
               onClick={onNavClick}
             >
-              <Icon size={18} />
-              <span>{label}</span>
+              <Icon size={20} />
+              <span className="text-base">{label}</span>
               {active && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ffa720]"
+                  className="ml-auto w-2 h-2 rounded-full bg-[#ffa720]"
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
@@ -300,13 +812,13 @@ function SidebarContent({ location, onNavClick, farmSettings }) {
       {/* User profile — mt-auto pins it to the bottom */}
       <div className="mt-auto p-4 border-t border-white/[0.06] shrink-0">
         {/* min-h-[56px] for touch accessibility */}
-        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors cursor-pointer min-h-[56px]">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg badge-citrus flex items-center justify-center flex-shrink-0 text-white font-mono text-xs font-bold">
+        <div className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors cursor-pointer min-h-[56px]">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl badge-citrus flex items-center justify-center flex-shrink-0 text-white font-mono text-sm font-bold">
             {getInitials(farmerName)}
           </div>
           <div className="min-w-0">
-            <div className="font-body text-sm text-[#dacdb8] truncate">{farmerName}</div>
-            <div className="font-mono text-[8px] text-[#9e7a50]">Petani · Admin</div>
+            <div className="font-body text-base text-[#fdf6f0] font-bold truncate">{farmerName}</div>
+            <div className="font-mono text-xs text-[#dacdb8] font-medium">Petani · Admin</div>
           </div>
         </div>
       </div>
@@ -322,14 +834,20 @@ function DashboardOverview({ farmSettings }) {
   const [fertilizerSchedule, setFertilizerSchedule] = useState([])
   const [aiAlerts, setAiAlerts] = useState([])
   const [treeBatches, setTreeBatches] = useState([])
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [timeframe, setTimeframe] = useState('7m')
+  const [showTimeframeMenu, setShowTimeframeMenu] = useState(false)
 
   useEffect(() => {
     fetchDashboardStats().then(setStats)
-    fetchHealthTrend().then(setHealthTrend)
     fetchFertilizerSchedule().then(setFertilizerSchedule)
     fetchAIAlerts().then(setAiAlerts)
     fetchTreeBatches().then(setTreeBatches)
   }, [])
+
+  useEffect(() => {
+    fetchHealthTrend(timeframe).then(setHealthTrend)
+  }, [timeframe])
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
@@ -339,7 +857,7 @@ function DashboardOverview({ farmSettings }) {
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0]">
           Selamat datang, <span className="shimmer-text">{farmSettings?.farmerName || 'Pak Suwanto'}</span>
         </h1>
-        <p className="font-body text-sm text-[#9e7a50] mt-1.5">
+        <p className="font-body text-base text-[#dacdb8] mt-1.5 font-medium">
           Ringkasan kebun pomelo Anda — {farmSettings?.farmName || 'Desa Bibis, Magetan'}
         </p>
       </div>
@@ -357,58 +875,85 @@ function DashboardOverview({ farmSettings }) {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {/* Health trend area chart */}
-        <motion.div variants={staggerItem} className="xl:col-span-2 glass-card p-4 sm:p-5">
+        <motion.div variants={staggerItem} className="xl:col-span-2 glass-card p-4 sm:p-5 relative">
           <div className="flex items-center justify-between mb-4 sm:mb-5">
             <div>
-              <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] text-[#9e7a50] mb-0.5">Tren Kesehatan</div>
-              <h2 className="font-heading text-lg sm:text-xl font-semibold text-[#fdf6f0]">Status Pohon Bulanan</h2>
+              <div className="font-mono text-xs uppercase tracking-[0.15em] text-[#ffa720] font-bold mb-1">
+                Tren Kesehatan ({timeframe === '3m' ? '3 Bulan' : timeframe === '1y' ? '1 Tahun' : '7 Bulan'})
+              </div>
+              <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">Status Pohon Bulanan</h2>
             </div>
-            <button className="p-2.5 rounded-lg glass-card hover:bg-white/[0.06] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <MoreHorizontal size={14} className="text-[#9e7a50]" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowTimeframeMenu(!showTimeframeMenu)}
+                title="Pilih Rentang Waktu"
+                className="p-2.5 rounded-xl glass-card hover:bg-white/[0.08] transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center cursor-pointer"
+              >
+                <MoreHorizontal size={18} className="text-[#dacdb8]" />
+              </button>
+              {showTimeframeMenu && (
+                <div className="absolute right-0 top-12 z-20 w-44 glass-card-warm p-1.5 rounded-2xl border border-[#ffa720]/40 shadow-xl space-y-1">
+                  {[
+                    { id: '3m', label: '3 Bulan Terakhir' },
+                    { id: '7m', label: '7 Bulan (Standar)' },
+                    { id: '1y', label: '1 Tahun Lengkap' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => { setTimeframe(opt.id); setShowTimeframeMenu(false) }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        timeframe === opt.id ? 'bg-[#ffa720] text-black font-extrabold' : 'text-[#dacdb8] hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={healthTrend} margin={{ top: 0, right: 0, bottom: 0, left: -30 }}>
+          <ResponsiveContainer width="100%" height={170}>
+            <AreaChart data={healthTrend} margin={{ top: 0, right: 0, bottom: 0, left: -25 }}>
               <defs>
                 <linearGradient id="healthyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#7fe030" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#7fe030" stopOpacity={0}   />
+                  <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0}    />
                 </linearGradient>
                 <linearGradient id="flaggedGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#f83b3b" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#f83b3b" stopOpacity={0}    />
+                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0}    />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="month" tick={{ fontFamily: 'IBM Plex Mono', fontSize: 9, fill: '#9e7a50' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontFamily: 'IBM Plex Mono', fontSize: 9, fill: '#9e7a50' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="month" tick={{ fontFamily: 'IBM Plex Mono', fontSize: 11, fill: '#dacdb8', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontFamily: 'IBM Plex Mono', fontSize: 11, fill: '#dacdb8', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: 'rgba(42,29,22,0.95)', border: '1px solid rgba(255,167,32,0.15)', borderRadius: 8, fontFamily: 'IBM Plex Mono', fontSize: 11 }}
+                contentStyle={{ background: 'rgba(30,15,8,0.98)', border: '1.5px solid rgba(255,167,32,0.3)', borderRadius: 10, fontFamily: 'IBM Plex Mono', fontSize: 13, fontWeight: 'bold' }}
               />
-              <Area type="monotone" dataKey="healthy" stroke="#7fe030" strokeWidth={2} fill="url(#healthyGrad)" name="Sehat" />
-              <Area type="monotone" dataKey="flagged" stroke="#f83b3b" strokeWidth={2} fill="url(#flaggedGrad)" name="Terdeteksi" />
+              <Area type="monotone" dataKey="healthy" stroke="#22c55e" strokeWidth={3} fill="url(#healthyGrad)" name="Sehat" />
+              <Area type="monotone" dataKey="flagged" stroke="#ef4444" strokeWidth={3} fill="url(#flaggedGrad)" name="Terdeteksi" />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
 
         {/* Batch distribution bars */}
         <motion.div variants={staggerItem} className="glass-card p-4 sm:p-5">
-          <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] text-[#9e7a50] mb-0.5">Distribusi Batch</div>
-          <h2 className="font-heading text-lg sm:text-xl font-semibold text-[#fdf6f0] mb-4">Per Blok Kebun</h2>
-          <div className="space-y-3 sm:space-y-3.5">
+          <div className="font-mono text-xs uppercase tracking-[0.15em] text-[#ffa720] font-bold mb-1">Distribusi Batch</div>
+          <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0] mb-4">Per Blok Kebun</h2>
+          <div className="space-y-4">
             {treeBatches.map((b, i) => {
               const pct = Math.round((b.healthy / b.count) * 100)
               return (
                 <div key={b.id}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[9px] sm:text-[10px] text-[#dacdb8] truncate mr-2">{b.id}</span>
-                    <span className="font-mono text-[10px] flex-shrink-0" style={{ color: pct === 100 ? '#7fe030' : '#ffa720' }}>
-                      {pct}%
+                    <span className="font-mono text-xs sm:text-sm font-bold text-[#fdf6f0] truncate mr-2">{b.id}</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold flex-shrink-0" style={{ color: pct === 100 ? '#4ade80' : '#fbbf24' }}>
+                      {pct}% Sehat
                     </span>
                   </div>
-                  <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/[0.08] rounded-full overflow-hidden">
                     <motion.div
                       className="h-full rounded-full"
-                      style={{ background: pct === 100 ? 'linear-gradient(90deg,#5ec412,#7fe030)' : 'linear-gradient(90deg,#f98208,#ffa720)' }}
+                      style={{ background: pct === 100 ? 'linear-gradient(90deg,#16a34a,#22c55e)' : 'linear-gradient(90deg,#d97706,#f59e0b)' }}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 1.2, ease: 'easeOut', delay: i * 0.1 + 0.3 }}
@@ -425,31 +970,35 @@ function DashboardOverview({ farmSettings }) {
       <motion.div variants={staggerItem} className="glass-card p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 sm:mb-5">
           <div>
-            <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] text-[#9e7a50] mb-0.5">AI MobileNetV2</div>
-            <h2 className="font-heading text-lg sm:text-xl font-semibold text-[#fdf6f0]">Peringatan Penyakit</h2>
+            <div className="font-mono text-xs uppercase tracking-[0.15em] text-[#ffa720] font-bold mb-1">AI MobileNetV2</div>
+            <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">Peringatan Penyakit</h2>
           </div>
           <Link
             to="/admin/ai-scan"
-            className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-[#ffa720]/70 hover:text-[#ffa720] transition-colors min-h-[44px] px-2"
+            className="flex items-center gap-1 font-mono text-xs font-bold uppercase tracking-wider text-[#ffa720] hover:underline min-h-[48px] px-3 py-2 rounded-xl bg-[#ffa720]/15 border border-[#ffa720]/30"
           >
-            Lihat <ChevronRight size={11} />
+            Lihat Semua <ChevronRight size={14} />
           </Link>
         </div>
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-3">
           {aiAlerts.map((a) => (
             <motion.div key={a.id} variants={staggerItem}
-              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-3.5 rounded-xl border border-white/[0.05] hover:bg-white/[0.03] active:bg-white/[0.05] transition-colors cursor-pointer min-h-[64px]"
+              onClick={() => setSelectedAlert(a)}
+              title="Klik untuk melihat SOP & detail deteksi"
+              className={`flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-colors cursor-pointer min-h-[72px] ${
+                a.severity === 'high' ? 'bg-red-950/30 border-red-500/40 hover:bg-red-950/40' : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06]'
+              }`}
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-pomelo-900/40 border border-pomelo-700/30 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle size={15} className="text-pomelo-400" />
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-pomelo-900/60 border border-pomelo-600/50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-pomelo-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                  <span className="font-mono text-[10px] sm:text-[11px] font-medium text-[#dacdb8]">{a.id}</span>
-                  <span className="font-mono text-[8px] text-[#9e7a50] hidden sm:inline">· {a.batch}</span>
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <span className="font-mono text-xs sm:text-sm font-bold text-[#fdf6f0]">{a.id}</span>
+                  <span className="font-mono text-xs text-[#dacdb8] font-medium hidden sm:inline">· {a.batch}</span>
                 </div>
-                <div className="font-body text-sm text-[#fdf6f0]/80 truncate">{a.disease}</div>
-                <div className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50]/60 mt-0.5">{a.confidence}% · {a.time}</div>
+                <div className="font-body text-base font-bold text-[#fdf6f0] truncate">{a.disease}</div>
+                <div className="font-mono text-xs text-[#dacdb8] mt-0.5 font-medium">Confidence: {a.confidence}% · {a.time}</div>
               </div>
               <SeverityBadge level={a.severity} />
             </motion.div>
@@ -461,18 +1010,18 @@ function DashboardOverview({ farmSettings }) {
       <motion.div variants={staggerItem} className="glass-card p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 sm:mb-5">
           <div>
-            <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] text-[#9e7a50] mb-0.5">Jadwal Mendatang</div>
-            <h2 className="font-heading text-lg sm:text-xl font-semibold text-[#fdf6f0]">Pemupukan Terjadwal</h2>
+            <div className="font-mono text-xs uppercase tracking-[0.15em] text-[#ffa720] font-bold mb-1">Jadwal Mendatang</div>
+            <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">Pemupukan Terjadwal</h2>
           </div>
           <Link
             to="/admin/fertilize"
-            className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-[#ffa720]/70 hover:text-[#ffa720] transition-colors min-h-[44px] px-2"
+            className="flex items-center gap-1 font-mono text-xs font-bold uppercase tracking-wider text-[#ffa720] hover:underline min-h-[48px] px-3 py-2 rounded-xl bg-[#ffa720]/15 border border-[#ffa720]/30"
           >
-            Kelola <ChevronRight size={11} />
+            Kelola <ChevronRight size={14} />
           </Link>
         </div>
         <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
-          <table className="data-table w-full min-w-[480px]">
+          <table className="data-table w-full min-w-[500px]">
             <thead>
               <tr>
                 <th>ID</th><th>Batch</th><th>Pohon</th><th>Jenis Pupuk</th><th>Tanggal</th><th>Status</th>
@@ -481,15 +1030,15 @@ function DashboardOverview({ farmSettings }) {
             <tbody>
               {fertilizerSchedule.map((f) => (
                 <tr key={f.id}>
-                  <td className="text-[#ffa720]/80">{f.id}</td>
-                  <td>{f.batch}</td>
-                  <td>{f.trees}</td>
-                  <td>{f.type}</td>
-                  <td className="whitespace-nowrap">{f.date}</td>
+                  <td className="font-mono font-bold text-[#ffa720] text-sm">{f.id}</td>
+                  <td className="font-semibold text-[#fdf6f0] text-sm">{f.batch}</td>
+                  <td className="font-medium text-[#dacdb8] text-sm">{f.trees} pohon</td>
+                  <td className="font-medium text-[#fdf6f0] text-sm">{f.type}</td>
+                  <td className="whitespace-nowrap font-mono text-xs font-medium text-[#dacdb8]">{f.date}</td>
                   <td>
                     {f.status === 'done'
-                      ? <span className="flex items-center gap-1.5 text-[#7fe030]"><Check size={11} /> Selesai</span>
-                      : <span className="flex items-center gap-1.5 text-[#ffa720]"><Clock size={11} /> Terjadwal</span>
+                      ? <span className="badge-status-done inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"><Check size={14} /> Selesai</span>
+                      : <span className="badge-status-scheduled inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"><Clock size={14} /> Terjadwal</span>
                     }
                   </td>
                 </tr>
@@ -498,6 +1047,11 @@ function DashboardOverview({ farmSettings }) {
           </table>
         </div>
       </motion.div>
+
+      {/* Render alert detail modal if clicked */}
+      {selectedAlert && (
+        <AIAlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
+      )}
     </motion.div>
   )
 }
@@ -509,51 +1063,58 @@ function TreeBatchesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedQrBatch, setSelectedQrBatch] = useState(null)
+  const [selectedDetailBatch, setSelectedDetailBatch] = useState(null)
+  const [showAddBatchModal, setShowAddBatchModal] = useState(false)
 
-  useEffect(() => {
+  const loadBatches = useCallback(() => {
     fetchTreeBatches({ query: searchQuery, status: statusFilter }).then(setBatches)
   }, [searchQuery, statusFilter])
 
+  useEffect(() => {
+    loadBatches()
+  }, [loadBatches])
+
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0]">Batch Pohon</h1>
-          <p className="font-body text-sm text-[#9e7a50] mt-1">Kelola semua batch pohon pomelo aktif & QR Lacak Balak</p>
+          <p className="font-body text-base text-[#dacdb8] mt-1 font-medium">Kelola semua batch pohon pomelo aktif & QR Lacak Balak</p>
         </div>
         <motion.button
-          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-          className="badge-citrus text-white font-body text-sm px-4 sm:px-5 py-2.5 rounded-xl flex items-center gap-2 flex-shrink-0 min-h-[44px] self-start sm:self-auto"
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => setShowAddBatchModal(true)}
+          className="btn-action-green text-white font-body text-base font-bold px-6 py-3.5 rounded-2xl flex items-center gap-2.5 flex-shrink-0 min-h-[50px] self-start sm:self-auto shadow-xl cursor-pointer"
         >
-          <TreePine size={15} />
+          <Plus size={22} />
           <span>Tambah Batch</span>
         </motion.button>
       </div>
 
       {/* ── Search & Filter Bar ── */}
-      <div className="glass-card p-3 sm:p-4 flex flex-col md:flex-row items-center gap-3">
+      <div className="glass-card p-3.5 sm:p-4 flex flex-col md:flex-row items-center gap-3.5">
         {/* Search input */}
         <div className="relative flex-1 w-full">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e7a50]" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dacdb8]" />
           <input
             type="text"
             placeholder="Cari ID batch, lokasi, atau varietas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 font-body text-sm text-[#fdf6f0] placeholder-[#9e7a50]/60 focus:outline-none focus:border-[#ffa720]/40 transition-colors"
+            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-xl pl-11 pr-4 py-3 font-body text-base text-[#fdf6f0] placeholder-[#dacdb8]/60 focus:outline-none focus:border-[#ffa720] transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e7a50] hover:text-white"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#dacdb8] hover:text-white p-1 cursor-pointer"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           )}
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           {[
             { id: 'all', label: 'Semua Batch' },
             { id: 'healthy', label: '100% Sehat' },
@@ -562,10 +1123,10 @@ function TreeBatchesPage() {
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-2 rounded-lg font-mono text-[9px] uppercase tracking-wider whitespace-nowrap transition-colors min-h-[38px] ${
+              className={`px-4 py-2.5 rounded-xl font-mono text-xs sm:text-sm uppercase tracking-wider font-bold whitespace-nowrap transition-colors min-h-[44px] cursor-pointer ${
                 statusFilter === tab.id
-                  ? 'bg-[#ffa720]/20 text-[#ffa720] border border-[#ffa720]/40'
-                  : 'bg-white/[0.03] text-[#9e7a50] border border-white/[0.05] hover:text-[#dacdb8]'
+                  ? 'bg-[#ffa720] text-black font-extrabold shadow-md'
+                  : 'bg-white/[0.05] text-[#dacdb8] border border-white/[0.1] hover:text-white'
               }`}
             >
               {tab.label}
@@ -576,59 +1137,62 @@ function TreeBatchesPage() {
 
       {/* Grid of Batches */}
       {batches.length === 0 ? (
-        <div className="glass-card p-10 text-center text-[#9e7a50]">
+        <div className="glass-card p-10 text-center text-[#dacdb8] text-base font-medium">
           Tidak ada batch pohon yang cocok dengan pencarian "{searchQuery}"
         </div>
       ) : (
         <motion.div
           variants={staggerContainer} initial="hidden" animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
           {batches.map((b) => {
             const pct = Math.round((b.healthy / b.count) * 100)
             return (
               <motion.div key={b.id} variants={staggerItem}
-                className="glass-card p-4 sm:p-5 hover:border-[#ffa72025] active:border-[#ffa72035] transition-colors"
+                className="glass-card p-5 sm:p-6 hover:border-[#ffa72050] active:border-[#ffa720] transition-colors shadow-lg"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="min-w-0 mr-2">
-                    <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-[#9e7a50]">{b.location}</span>
-                    <h3 className="font-heading text-xl sm:text-2xl font-semibold text-[#fdf6f0] mt-0.5">{b.id}</h3>
-                    <p className="font-body text-sm text-[#dacdb8]/60">{b.variety}</p>
+                    <span className="font-mono text-xs uppercase tracking-[0.14em] text-[#ffa720] font-bold">{b.location}</span>
+                    <h3 className="font-heading text-2xl sm:text-3xl font-bold text-[#fdf6f0] mt-0.5">{b.id}</h3>
+                    <p className="font-body text-base font-semibold text-[#dacdb8]">{b.variety}</p>
                   </div>
-                  <div className={`status-dot mt-2 flex-shrink-0 ${b.flagged > 0 ? 'warning' : 'healthy'}`} />
+                  <div className={`status-dot mt-2 flex-shrink-0 ${b.flagged > 0 ? 'danger' : 'healthy'}`} style={{ width: 12, height: 12 }} />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 pt-3 border-t border-white/[0.06]">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 pt-4 border-t border-white/[0.08]">
                   {[
                     { label: 'Total', val: b.count, color: '#fdf6f0' },
-                    { label: 'Sehat', val: b.healthy, color: '#7fe030' },
-                    { label: 'Flagged', val: b.flagged, color: b.flagged > 0 ? '#f83b3b' : '#9e7a50' },
+                    { label: 'Sehat', val: b.healthy, color: '#4ade80' },
+                    { label: 'Flagged', val: b.flagged, color: b.flagged > 0 ? '#ef4444' : '#dacdb8' },
                   ].map(s => (
                     <div key={s.label} className="text-center">
-                      <div className="font-heading text-xl sm:text-2xl font-bold" style={{ color: s.color }}>{s.val}</div>
-                      <div className="font-mono text-[7px] sm:text-[8px] uppercase tracking-wider text-[#9e7a50]">{s.label}</div>
+                      <div className="font-heading text-2xl sm:text-3xl font-bold" style={{ color: s.color }}>{s.val}</div>
+                      <div className="font-mono text-xs uppercase tracking-wider text-[#dacdb8] font-bold">{s.label}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <div className="h-2.5 bg-white/[0.08] rounded-full overflow-hidden">
                   <motion.div className="h-full rounded-full"
-                    style={{ background: pct === 100 ? 'linear-gradient(90deg,#5ec412,#7fe030)' : 'linear-gradient(90deg,#f98208,#ffa720)' }}
+                    style={{ background: pct === 100 ? 'linear-gradient(90deg,#16a34a,#22c55e)' : 'linear-gradient(90deg,#d97706,#f59e0b)' }}
                     initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                     transition={{ duration: 1.2, ease: 'easeOut' }}
                   />
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-2">
+                <div className="flex items-center justify-between mt-5 pt-3 border-t border-white/[0.06]">
                   <button
                     onClick={() => setSelectedQrBatch(b)}
-                    className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-[#ffa720] hover:text-[#ffdb84] transition-colors min-h-[44px] px-2.5 py-1 rounded-lg bg-[#ffa720]/10 border border-[#ffa720]/20"
+                    className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-[#ffa720] hover:text-[#ffdb84] transition-colors min-h-[48px] px-4 py-2.5 rounded-xl bg-[#ffa720]/15 border border-[#ffa720]/40 cursor-pointer"
                   >
-                    <QrCode size={12} /> Label QR Code
+                    <QrCode size={16} /> Label QR Code
                   </button>
-                  <button className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-[#9e7a50] hover:text-[#ffa720] transition-colors min-h-[44px] px-2">
-                    <Eye size={11} /> Detail
+                  <button
+                    onClick={() => setSelectedDetailBatch(b)}
+                    className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-[#dacdb8] hover:text-white transition-colors min-h-[48px] px-4 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] cursor-pointer hover:bg-white/[0.1]"
+                  >
+                    <Eye size={16} /> Detail
                   </button>
                 </div>
               </motion.div>
@@ -641,6 +1205,26 @@ function TreeBatchesPage() {
       {selectedQrBatch && (
         <QRCodeModal batch={selectedQrBatch} onClose={() => setSelectedQrBatch(null)} />
       )}
+
+      {/* Render Batch Detail Modal if selected */}
+      {selectedDetailBatch && (
+        <BatchDetailModal
+          batch={selectedDetailBatch}
+          onClose={() => setSelectedDetailBatch(null)}
+          onOpenQr={(b) => {
+            setSelectedDetailBatch(null)
+            setSelectedQrBatch(b)
+          }}
+        />
+      )}
+
+      {/* Render Add Batch Modal if active */}
+      {showAddBatchModal && (
+        <AddBatchModal
+          onClose={() => setShowAddBatchModal(false)}
+          onSuccess={loadBatches}
+        />
+      )}
     </motion.div>
   )
 }
@@ -650,75 +1234,195 @@ function AIScanPage() {
   const [alerts, setAlerts] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState('all')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [latestResult, setLatestResult] = useState(null)
+  const [selectedAlertDetail, setSelectedAlertDetail] = useState(null)
+  const fileInputRef = useRef(null)
 
-  useEffect(() => {
+  const loadAlerts = useCallback(() => {
     fetchAIAlerts({ query: searchQuery, severity: severityFilter }).then(setAlerts)
   }, [searchQuery, severityFilter])
+
+  useEffect(() => {
+    loadAlerts()
+  }, [loadAlerts])
+
+  const processAnalysis = async (file = null) => {
+    setIsAnalyzing(true)
+    setLatestResult(null)
+    setTimeout(async () => {
+      const result = await analyzeLeafPhoto(file)
+      setIsAnalyzing(false)
+      setLatestResult(result)
+      loadAlerts()
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }, 1300)
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      processAnalysis(file)
+    }
+  }
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
       <div>
-        <span className="badge-citrus text-white font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg">
+        <span className="badge-citrus text-white font-mono text-xs uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg font-bold">
           MobileNetV2 Active
         </span>
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0] mt-2">Deteksi Penyakit AI</h1>
-        <p className="font-body text-sm text-[#9e7a50] mt-1">
+        <p className="font-body text-base text-[#dacdb8] mt-1 font-medium">
           Model AI menganalisis foto daun dari seluruh batch secara real-time
         </p>
       </div>
 
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {/* Result Notification Banner */}
+      {latestResult && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 rounded-2xl glass-card-warm border-2 border-[#ffa720] shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-md ${
+              latestResult.severity === 'high' ? 'bg-red-600' : latestResult.severity === 'medium' ? 'bg-amber-600' : 'bg-emerald-600'
+            }`}>
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <div className="font-mono text-xs uppercase text-[#ffa720] font-bold">Hasil Analisis Selesai ({latestResult.id})</div>
+              <div className="font-heading text-xl font-bold text-[#fdf6f0]">{latestResult.disease}</div>
+              <div className="font-mono text-xs text-[#dacdb8]">Keyakinan Model: {latestResult.confidence}% · {latestResult.batch}</div>
+            </div>
+          </div>
+          <button
+            onClick={() => setSelectedAlertDetail(latestResult)}
+            className="btn-action-green text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer shadow-md self-end sm:self-auto"
+          >
+            <Eye size={16} /> Baca SOP Penanganan
+          </button>
+        </motion.div>
+      )}
+
       {/* Upload zone — full width on mobile, touch-friendly */}
       <motion.div variants={staggerItem}
-        className="border-2 border-dashed border-[#ffa720]/20 rounded-2xl sm:rounded-3xl p-8 sm:p-10 text-center hover:border-[#ffa720]/40 active:border-[#ffa720]/50 transition-colors cursor-pointer"
-        style={{ background: 'rgba(249,130,8,0.03)' }}
-        whileTap={{ scale: 0.99 }}
+        className={`border-2 border-dashed rounded-3xl p-7 sm:p-10 text-center transition-all shadow-lg relative overflow-hidden ${
+          isAnalyzing
+            ? 'border-[#ffa720] bg-amber-950/40'
+            : 'border-[#ffa720]/40 hover:border-[#ffa720] active:border-[#ffa720] bg-black/20'
+        }`}
       >
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl badge-citrus flex items-center justify-center mx-auto mb-4">
-          <ScanLine size={26} className="text-white" />
-        </div>
-        <h3 className="font-heading text-xl sm:text-2xl font-semibold text-[#fdf6f0] mb-2">Upload Foto Daun</h3>
-        <p className="font-body text-sm text-[#9e7a50]">Tap untuk memilih foto dari galeri (JPG/PNG)</p>
-        <p className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50]/50 mt-2 uppercase tracking-widest">
-          Analisis dalam &lt;2 detik
-        </p>
+        {isAnalyzing ? (
+          <div className="py-6 flex flex-col items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+              className="w-16 h-16 rounded-2xl btn-action-yellow flex items-center justify-center mb-4 shadow-xl text-black"
+            >
+              <Zap size={32} />
+            </motion.div>
+            <h3 className="font-heading text-2xl sm:text-3xl font-bold text-[#fdf6f0] mb-2">
+              Menganalisis Pola Daun...
+            </h3>
+            <p className="font-mono text-xs sm:text-sm text-[#ffa720] font-bold uppercase tracking-widest">
+              Model MobileNetV2 mengekstraksi tekstur klorosis daun
+            </p>
+            <div className="w-64 h-2 bg-white/10 rounded-full mt-4 overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-amber-500 to-emerald-400"
+                animate={{ x: [-100, 256] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="cursor-pointer group"
+            >
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl badge-citrus flex items-center justify-center mx-auto mb-4 shadow-md group-hover:scale-105 transition-transform">
+                <ScanLine size={32} className="text-white" />
+              </div>
+              <h3 className="font-heading text-2xl sm:text-3xl font-bold text-[#fdf6f0] mb-2 group-hover:text-[#ffa720] transition-colors">
+                Upload Foto Daun
+              </h3>
+              <p className="font-body text-base text-[#dacdb8] font-medium max-w-md mx-auto">
+                Sentuh di sini untuk memilih foto daun jeruk dari galeri atau kamera smartphone (JPG/PNG)
+              </p>
+              <p className="font-mono text-xs text-[#ffa720] mt-2 uppercase tracking-widest font-bold">
+                Analisis Otomatis dalam &lt;2 Detik
+              </p>
+            </div>
+
+            {/* Quick Demo Button */}
+            <div className="mt-5 pt-4 border-t border-white/[0.08] flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-action-green text-white font-bold text-sm px-6 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-lg min-h-[48px]"
+              >
+                <Plus size={18} /> Pilih File Foto
+              </button>
+              <button
+                type="button"
+                onClick={() => processAnalysis()}
+                className="btn-action-yellow text-black font-extrabold text-sm px-6 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-lg min-h-[48px]"
+              >
+                <Zap size={18} /> Uji Coba Scan Cepat (Demo)
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* ── Search & Filter Bar ── */}
-      <div className="glass-card p-3 sm:p-4 flex flex-col md:flex-row items-center gap-3">
+      <div className="glass-card p-3.5 sm:p-4 flex flex-col md:flex-row items-center gap-3.5">
         <div className="relative flex-1 w-full">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e7a50]" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dacdb8]" />
           <input
             type="text"
             placeholder="Cari ID sampel, batch, atau jenis penyakit..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 font-body text-sm text-[#fdf6f0] placeholder-[#9e7a50]/60 focus:outline-none focus:border-[#ffa720]/40 transition-colors"
+            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-xl pl-11 pr-4 py-3 font-body text-base text-[#fdf6f0] placeholder-[#dacdb8]/60 focus:outline-none focus:border-[#ffa720] transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e7a50] hover:text-white"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#dacdb8] hover:text-white p-1 cursor-pointer"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           )}
         </div>
 
         {/* Severity Filter Tabs */}
-        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           {[
             { id: 'all', label: 'Semua Alert' },
-            { id: 'high', label: 'Tinggi' },
-            { id: 'medium', label: 'Sedang' },
-            { id: 'low', label: 'Rendah' },
+            { id: 'high', label: 'Tinggi (Bahaya)' },
+            { id: 'medium', label: 'Sedang (Hati-hati)' },
+            { id: 'low', label: 'Rendah (Aman)' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setSeverityFilter(tab.id)}
-              className={`px-3 py-2 rounded-lg font-mono text-[9px] uppercase tracking-wider whitespace-nowrap transition-colors min-h-[38px] ${
+              className={`px-4 py-2.5 rounded-xl font-mono text-xs sm:text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-colors min-h-[44px] cursor-pointer ${
                 severityFilter === tab.id
-                  ? 'bg-[#ffa720]/20 text-[#ffa720] border border-[#ffa720]/40'
-                  : 'bg-white/[0.03] text-[#9e7a50] border border-white/[0.05] hover:text-[#dacdb8]'
+                  ? 'bg-[#ffa720] text-black font-extrabold shadow-md'
+                  : 'bg-white/[0.05] text-[#dacdb8] border border-white/[0.1] hover:text-white'
               }`}
             >
               {tab.label}
@@ -729,44 +1433,66 @@ function AIScanPage() {
 
       {/* Alert list */}
       <div>
-        <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] text-[#9e7a50] mb-3">
-          Hasil Deteksi Terbaru ({alerts.length})
+        <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.15em] text-[#ffa720] font-bold mb-3 flex items-center justify-between">
+          <span>Hasil Deteksi Terbaru ({alerts.length})</span>
+          <span className="text-[#dacdb8] font-normal text-xs">Klik item untuk melihat SOP</span>
         </div>
         {alerts.length === 0 ? (
-          <div className="glass-card p-8 text-center text-[#9e7a50]">
+          <div className="glass-card p-10 text-center text-[#dacdb8] text-base font-medium">
             Tidak ada data deteksi yang sesuai filter.
           </div>
         ) : (
-          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3.5">
             {alerts.map((a) => (
               <motion.div key={a.id} variants={staggerItem}
-                className={`glass-card${a.severity === 'high' ? '-danger' : ''} p-4 sm:p-5 flex items-center gap-3 sm:gap-5 min-h-[72px]`}
+                onClick={() => setSelectedAlertDetail(a)}
+                title="Klik untuk membuka SOP Penanganan Kebun"
+                className={`p-4 sm:p-5 rounded-2xl flex items-center gap-3.5 sm:gap-5 min-h-[80px] shadow-lg border-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                  a.severity === 'high'
+                    ? 'bg-red-950/40 border-red-500/60 hover:border-red-400'
+                    : a.severity === 'medium'
+                    ? 'bg-amber-950/30 border-amber-500/50 hover:border-amber-400'
+                    : 'bg-emerald-950/25 border-emerald-500/40 hover:border-emerald-400'
+                }`}
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: a.severity === 'high' ? 'rgba(248,59,59,0.15)' : a.severity === 'medium' ? 'rgba(249,130,8,0.12)' : 'rgba(127,224,48,0.10)',
-                    border: `1px solid ${a.severity === 'high' ? 'rgba(248,59,59,0.3)' : a.severity === 'medium' ? 'rgba(249,130,8,0.25)' : 'rgba(127,224,48,0.2)'}`,
+                    background: a.severity === 'high' ? 'rgba(239,68,68,0.25)' : a.severity === 'medium' ? 'rgba(245,158,11,0.25)' : 'rgba(34,197,94,0.2)',
+                    border: `1.5px solid ${a.severity === 'high' ? 'rgba(239,68,68,0.7)' : a.severity === 'medium' ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.6)'}`,
                   }}
                 >
-                  <AlertTriangle size={18} style={{ color: a.severity === 'high' ? '#ff6b6b' : a.severity === 'medium' ? '#ffa720' : '#7fe030' }} />
+                  <AlertTriangle size={24} style={{ color: a.severity === 'high' ? '#fca5a5' : a.severity === 'medium' ? '#fde68a' : '#86efac' }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="font-mono text-sm font-medium text-[#dacdb8]">{a.id}</span>
-                    <span className="font-mono text-[9px] text-[#9e7a50] hidden sm:inline">{a.batch}</span>
+                    <span className="font-mono text-sm sm:text-base font-bold text-[#fdf6f0]">{a.id}</span>
+                    <span className="font-mono text-xs text-[#dacdb8] font-semibold hidden sm:inline">· {a.batch}</span>
                   </div>
-                  <div className="font-body text-sm text-[#fdf6f0]/90 truncate">{a.disease}</div>
-                  <div className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50]/60 mt-0.5">
-                    Confidence: <span style={{ color: a.severity === 'high' ? '#ff6b6b' : '#ffa720' }}>{a.confidence}%</span>
+                  <div className="font-body text-base sm:text-lg font-bold text-[#fdf6f0] truncate">{a.disease}</div>
+                  <div className="font-mono text-xs sm:text-sm text-[#dacdb8] mt-1 font-semibold">
+                    Confidence: <span style={{ color: a.severity === 'high' ? '#fca5a5' : '#fde68a' }}>{a.confidence}%</span>
                     {' · '}{a.time}
                   </div>
                 </div>
-                <SeverityBadge level={a.severity} />
+                <div className="flex items-center gap-2">
+                  <SeverityBadge level={a.severity} />
+                  <div className="p-2 rounded-xl bg-white/[0.06] text-[#dacdb8] hidden sm:flex">
+                    <Eye size={16} />
+                  </div>
+                </div>
               </motion.div>
             ))}
           </motion.div>
         )}
       </div>
+
+      {/* Detail SOP Modal */}
+      {selectedAlertDetail && (
+        <AIAlertDetailModal
+          alert={selectedAlertDetail}
+          onClose={() => setSelectedAlertDetail(null)}
+        />
+      )}
     </motion.div>
   )
 }
@@ -791,7 +1517,7 @@ function AddFertilizerModal({ onClose, onSuccess }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/70 backdrop-blur-sm"
@@ -801,112 +1527,119 @@ function AddFertilizerModal({ onClose, onSuccess }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative z-10 w-full max-w-md glass-card-warm p-6 rounded-3xl border border-[#ffa720]/30 shadow-2xl"
+          className="relative z-10 w-full max-w-md max-h-[90vh] flex flex-col glass-card-warm rounded-3xl border border-[#ffa720]/30 shadow-2xl overflow-hidden"
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-xl glass-card text-[#9e7a50] hover:text-white transition-colors"
-          >
-            <X size={18} />
-          </button>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl badge-citrus flex items-center justify-center">
-              <FlaskConical size={20} className="text-white" />
+          {/* Pinned Header */}
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-white/[0.08] bg-black/20">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl btn-action-green flex items-center justify-center shadow-md flex-shrink-0">
+                <FlaskConical size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0]">Tambah Jadwal Pupuk</h3>
+                <p className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold">Form Pemupukan Organik</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-heading text-xl font-bold text-[#fdf6f0]">Tambah Jadwal Pupuk</h3>
-              <p className="font-mono text-[9px] uppercase tracking-wider text-[#9e7a50]">Pomelo Trace Form</p>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl glass-card text-[#dacdb8] hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1">
-                Pilih Batch Pohon
-              </label>
-              <select
-                value={formData.batch}
-                onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                className="w-full bg-[#180b04] border border-white/[0.1] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
-              >
-                <option value="Batch-2022-A">Batch-2022-A (Blok Utara)</option>
-                <option value="Batch-2022-B">Batch-2022-B (Blok Timur)</option>
-                <option value="Batch-2023-A">Batch-2023-A (Blok Selatan)</option>
-                <option value="Batch-2023-B">Batch-2023-B (Blok Barat)</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-8 space-y-4">
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1">
-                  Jumlah Pohon
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  Pilih Batch Pohon
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.trees}
-                  onChange={(e) => setFormData({ ...formData, trees: e.target.value })}
-                  className="w-full bg-[#180b04] border border-white/[0.1] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
-                />
+                <select
+                  value={formData.batch}
+                  onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                >
+                  <option value="Batch-2022-A">Batch-2022-A (Blok Utara)</option>
+                  <option value="Batch-2022-B">Batch-2022-B (Blok Timur)</option>
+                  <option value="Batch-2023-A">Batch-2023-A (Blok Selatan)</option>
+                  <option value="Batch-2023-B">Batch-2023-B (Blok Barat)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                    Jumlah Pohon
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.trees}
+                    onChange={(e) => setFormData({ ...formData, trees: e.target.value })}
+                    className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                    Tanggal Pelaksanaan
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-3 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1">
-                  Tanggal Pelaksanaan
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  Jenis Pupuk Organik
                 </label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full bg-[#180b04] border border-white/[0.1] rounded-xl px-3 py-2 font-mono text-xs text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
+                >
+                  <option value="Kompos Kascing">Kompos Kascing (Kasut Cacing)</option>
+                  <option value="MOL Bonggol">MOL Bonggol Pisang</option>
+                  <option value="Pupuk Kalium">Pupuk Kalium Organik</option>
+                  <option value="Starter Organik">Starter Organik Bio-Activator</option>
+                  <option value="Pupuk Kasut Super">Pupuk Kasut Super</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5">
+                  Catatan Dosis & Instruksi (Opsional)
+                </label>
+                <textarea
+                  rows="2"
+                  placeholder="Dosis 2kg/pohon, siram setelah pemupukan..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full bg-[#180b04] border border-white/[0.2] rounded-xl p-3.5 font-body text-base text-[#fdf6f0] placeholder-[#dacdb8]/60 focus:outline-none focus:border-[#ffa720]"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1">
-                Jenis Pupuk Organik
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full bg-[#180b04] border border-white/[0.1] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
-              >
-                <option value="Kompos Kascing">Kompos Kascing (Kasut Cacing)</option>
-                <option value="MOL Bonggol">MOL Bonggol Pisang</option>
-                <option value="Pupuk Kalium">Pupuk Kalium Organik</option>
-                <option value="Starter Organik">Starter Organik Bio-Activator</option>
-                <option value="Pupuk Kasut Super">Pupuk Kasut Super</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1">
-                Catatan Dosis & Instruksi (Opsional)
-              </label>
-              <textarea
-                rows="2"
-                placeholder="Dosis 2kg/pohon, siram setelah pemupukan..."
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full bg-[#180b04] border border-white/[0.1] rounded-xl p-3 font-body text-sm text-[#fdf6f0] placeholder-[#9e7a50]/50 focus:outline-none focus:border-[#ffa720]/40"
-              />
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2">
+            {/* Pinned Footer */}
+            <div className="flex-shrink-0 p-4 sm:p-5 bg-black/40 border-t border-white/[0.1] flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] hover:text-white"
+                className="btn-action-red px-5 py-2.5 rounded-xl font-body text-base font-bold text-white min-h-[44px] cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="badge-citrus px-5 py-2.5 rounded-xl font-mono text-[10px] uppercase tracking-wider text-white hover:opacity-90 flex items-center gap-1.5 min-h-[44px]"
+                className="btn-action-green px-6 py-2.5 rounded-xl font-body text-base font-bold text-white flex items-center gap-2 min-h-[44px] cursor-pointer"
               >
-                <Plus size={14} /> Simpan Jadwal
+                <Plus size={18} /> Simpan Jadwal
               </button>
             </div>
           </form>
@@ -945,47 +1678,55 @@ function FertilizerManagementPage() {
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0]">Jadwal Pemupukan</h1>
-          <p className="font-body text-sm text-[#9e7a50] mt-1">Kelola program pemupukan organik terintegrasi per batch</p>
+          <p className="font-body text-base text-[#dacdb8] mt-1 font-medium">Kelola program pemupukan organik terintegrasi per batch</p>
         </div>
         <motion.button
-          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => setShowAddModal(true)}
-          className="badge-citrus text-white font-body text-sm px-4 sm:px-5 py-2.5 rounded-xl flex items-center gap-2 flex-shrink-0 min-h-[44px] self-start sm:self-auto"
+          className="btn-action-green text-white font-body text-base font-bold px-6 py-3.5 rounded-2xl flex items-center gap-2.5 flex-shrink-0 min-h-[50px] self-start sm:self-auto shadow-xl cursor-pointer"
         >
-          <Plus size={16} />
+          <Plus size={22} />
           <span>Tambah Jadwal</span>
         </motion.button>
       </div>
 
       {/* Search & Filter bar */}
-      <div className="glass-card p-3 sm:p-4 flex flex-col md:flex-row items-center gap-3">
+      <div className="glass-card p-3.5 sm:p-4 flex flex-col md:flex-row items-center gap-3.5">
         <div className="relative flex-1 w-full">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9e7a50]" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dacdb8]" />
           <input
             type="text"
             placeholder="Cari ID, nama batch, atau jenis pupuk..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 font-body text-sm text-[#fdf6f0] placeholder-[#9e7a50]/60 focus:outline-none focus:border-[#ffa720]/40 transition-colors"
+            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-xl pl-11 pr-10 py-3 font-body text-base text-[#fdf6f0] placeholder-[#dacdb8]/60 focus:outline-none focus:border-[#ffa720] transition-colors"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#dacdb8] hover:text-white p-1 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           {[
             { id: 'all', label: 'Semua Jadwal' },
-            { id: 'scheduled', label: 'Terjadwal' },
+            { id: 'scheduled', label: 'Terjadwal (Perhatian)' },
             { id: 'done', label: 'Selesai' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-2 rounded-lg font-mono text-[9px] uppercase tracking-wider whitespace-nowrap transition-colors min-h-[38px] ${
+              className={`px-4 py-2.5 rounded-xl font-mono text-xs sm:text-sm uppercase tracking-wider font-bold whitespace-nowrap transition-colors min-h-[44px] ${
                 statusFilter === tab.id
-                  ? 'bg-[#ffa720]/20 text-[#ffa720] border border-[#ffa720]/40'
-                  : 'bg-white/[0.03] text-[#9e7a50] border border-white/[0.05] hover:text-[#dacdb8]'
+                  ? 'bg-[#ffa720] text-black font-extrabold shadow-md'
+                  : 'bg-white/[0.05] text-[#dacdb8] border border-white/[0.1] hover:text-white'
               }`}
             >
               {tab.label}
@@ -995,16 +1736,16 @@ function FertilizerManagementPage() {
       </div>
 
       {/* Schedules Table */}
-      <div className="glass-card p-4 sm:p-5">
+      <div className="glass-card p-4 sm:p-6 shadow-xl">
         <div className="overflow-x-auto">
-          <table className="data-table w-full min-w-[600px]">
+          <table className="data-table w-full min-w-[620px]">
             <thead>
               <tr>
                 <th>ID</th>
                 <th>Batch Pohon</th>
                 <th>Target Pohon</th>
                 <th>Jenis Pupuk</th>
-                <th>Tanggal Execution</th>
+                <th>Tanggal Eksekusi</th>
                 <th>Status</th>
                 <th className="text-right">Aksi</th>
               </tr>
@@ -1012,43 +1753,43 @@ function FertilizerManagementPage() {
             <tbody>
               {schedules.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-[#9e7a50]">
+                  <td colSpan="7" className="text-center py-8 text-[#dacdb8] text-base font-medium">
                     Tidak ada jadwal pemupukan ditemukan.
                   </td>
                 </tr>
               ) : (
                 schedules.map((f) => (
                   <tr key={f.id}>
-                    <td className="font-mono text-[#ffa720] font-semibold">{f.id}</td>
-                    <td className="font-medium text-[#dacdb8]">{f.batch}</td>
-                    <td>{f.trees} pohon</td>
-                    <td className="text-[#fdf6f0]">{f.type}</td>
-                    <td className="whitespace-nowrap font-mono text-xs">{f.date}</td>
+                    <td className="font-mono text-[#ffa720] font-bold text-sm">{f.id}</td>
+                    <td className="font-bold text-[#fdf6f0] text-base">{f.batch}</td>
+                    <td className="font-medium text-[#dacdb8] text-base">{f.trees} pohon</td>
+                    <td className="text-[#fdf6f0] font-medium text-base">{f.type}</td>
+                    <td className="whitespace-nowrap font-mono text-xs font-semibold text-[#dacdb8]">{f.date}</td>
                     <td>
                       {f.status === 'done'
-                        ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[9px] font-mono uppercase bg-[#7fe030]/15 text-[#7fe030] border border-[#7fe030]/30"><Check size={10} /> Selesai</span>
-                        : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[9px] font-mono uppercase bg-[#ffa720]/15 text-[#ffa720] border border-[#ffa720]/30"><Clock size={10} /> Terjadwal</span>
+                        ? <span className="badge-status-done inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase"><Check size={14} /> Selesai</span>
+                        : <span className="badge-status-scheduled inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase"><Clock size={14} /> Terjadwal</span>
                       }
                     </td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleToggle(f.id)}
-                          title={f.status === 'done' ? 'Tandai Terjadwal' : 'Tandai Selesai'}
-                          className={`p-2 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center ${
+                          title={f.status === 'done' ? 'Tandai Belum Selesai' : 'Tandai Selesai'}
+                          className={`p-2.5 rounded-xl transition-all min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-md ${
                             f.status === 'done'
-                              ? 'bg-white/[0.05] text-[#9e7a50] hover:text-white'
-                              : 'bg-[#7fe030]/20 text-[#7fe030] hover:bg-[#7fe030]/30'
+                              ? 'bg-white/[0.08] text-[#dacdb8] hover:text-white'
+                              : 'btn-action-green'
                           }`}
                         >
-                          <CheckCircle2 size={15} />
+                          <CheckCircle2 size={18} />
                         </button>
                         <button
                           onClick={() => handleDelete(f.id)}
                           title="Hapus Jadwal"
-                          className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                          className="btn-action-red p-2.5 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-md"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -1112,107 +1853,107 @@ function SettingsPage({ onSettingsUpdate }) {
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6 max-w-4xl">
       <div>
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#fdf6f0]">Pengaturan Kebun</h1>
-        <p className="font-body text-sm text-[#9e7a50] mt-1">Konfigurasi data profil kebun, lokasi, dan preferensi sistem</p>
+        <p className="font-body text-base text-[#dacdb8] mt-1 font-medium">Konfigurasi data profil kebun, lokasi, dan preferensi sistem</p>
       </div>
 
       {savedToast && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-2xl bg-[#7fe030]/15 border border-[#7fe030]/30 text-[#7fe030] flex items-center gap-3 font-mono text-xs uppercase tracking-wider"
+          className="p-4 rounded-2xl badge-status-done text-[#4ade80] flex items-center gap-3 font-mono text-sm font-bold uppercase tracking-wider shadow-lg"
         >
-          <CheckCircle2 size={18} /> Pengaturan Berhasil Disimpan!
+          <CheckCircle2 size={22} /> Pengaturan Berhasil Disimpan!
         </motion.div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* Profil Kebun & Petani */}
-        <div className="glass-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
-            <Building size={18} className="text-[#ffa720]" />
-            <h2 className="font-heading text-xl font-semibold text-[#fdf6f0]">Profil Kebun & Pengelola</h2>
+        <div className="glass-card p-5 sm:p-6 space-y-5 shadow-xl">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.08]">
+            <Building size={22} className="text-[#ffa720]" />
+            <h2 className="font-heading text-2xl font-bold text-[#fdf6f0]">Profil Kebun & Pengelola</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1 flex items-center gap-1">
-                <User size={12} /> Nama Petani / Pengelola
+              <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5 flex items-center gap-1.5">
+                <User size={16} className="text-[#ffa720]" /> Nama Petani / Pengelola
               </label>
               <input
                 type="text"
                 value={settings.farmerName}
                 onChange={(e) => setSettings({ ...settings, farmerName: e.target.value })}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
+                className="w-full bg-white/[0.05] border border-white/[0.15] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
               />
             </div>
 
             <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1 flex items-center gap-1">
-                <Building size={12} /> Nama Kebun
+              <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5 flex items-center gap-1.5">
+                <Building size={16} className="text-[#ffa720]" /> Nama Kebun
               </label>
               <input
                 type="text"
                 value={settings.farmName}
                 onChange={(e) => setSettings({ ...settings, farmName: e.target.value })}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
+                className="w-full bg-white/[0.05] border border-white/[0.15] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
               />
             </div>
 
             <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1 flex items-center gap-1">
-                <MapPin size={12} /> Alamat Kebun
+              <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5 flex items-center gap-1.5">
+                <MapPin size={16} className="text-[#ffa720]" /> Alamat Kebun
               </label>
               <input
                 type="text"
                 value={settings.locationName}
                 onChange={(e) => setSettings({ ...settings, locationName: e.target.value })}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
+                className="w-full bg-white/[0.05] border border-white/[0.15] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
               />
             </div>
 
             <div>
-              <label className="block font-mono text-[10px] uppercase tracking-wider text-[#9e7a50] mb-1 flex items-center gap-1">
-                <MapPin size={12} /> Koordinat GPS Kebun
+              <label className="block font-body text-sm sm:text-base font-bold text-[#fdf6f0] mb-1.5 flex items-center gap-1.5">
+                <MapPin size={16} className="text-[#ffa720]" /> Koordinat GPS Kebun
               </label>
               <input
                 type="text"
                 value={settings.coordinates}
                 onChange={(e) => setSettings({ ...settings, coordinates: e.target.value })}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3.5 py-2.5 font-body text-sm text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]/40"
+                className="w-full bg-white/[0.05] border border-white/[0.15] rounded-xl px-4 py-3 font-body text-base text-[#fdf6f0] focus:outline-none focus:border-[#ffa720]"
               />
             </div>
           </div>
         </div>
 
         {/* Preferensi Notifikasi */}
-        <div className="glass-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
-            <Bell size={18} className="text-[#ffa720]" />
-            <h2 className="font-heading text-xl font-semibold text-[#fdf6f0]">Preferensi Notifikasi</h2>
+        <div className="glass-card p-5 sm:p-6 space-y-5 shadow-xl">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.08]">
+            <Bell size={22} className="text-[#ffa720]" />
+            <h2 className="font-heading text-2xl font-bold text-[#fdf6f0]">Preferensi Notifikasi</h2>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {[
               { key: 'aiAlerts', label: 'Notifikasi Peringatan Dini AI (HLB Alert)', desc: 'Kirim alert otomatis jika AI mendeteksi potensi penyakit >80% confidence' },
               { key: 'fertilizerReminders', label: 'Pengingat Jadwal Pemupukan Organik', desc: 'Pengingat 2 hari sebelum tanggal eksekusi pupuk kascing/MOL' },
               { key: 'weeklyReport', label: 'Laporan Ringkasan Kesehatan Kebun', desc: 'Kirim laporan ringkasan mingguan kesehatan 88 pohon' },
             ].map((n) => (
-              <div key={n.key} className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div key={n.key} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="min-w-0 mr-4">
-                  <div className="font-body text-sm font-medium text-[#fdf6f0]">{n.label}</div>
-                  <div className="font-body text-xs text-[#9e7a50] mt-0.5">{n.desc}</div>
+                  <div className="font-body text-base font-bold text-[#fdf6f0]">{n.label}</div>
+                  <div className="font-body text-sm text-[#dacdb8] mt-1">{n.desc}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => toggleNotif(n.key)}
-                  className={`w-12 h-7 rounded-full p-1 transition-colors flex-shrink-0 ${
-                    settings.notifications[n.key] ? 'bg-[#7fe030]' : 'bg-white/10'
+                  className={`w-14 h-8 rounded-full p-1 transition-colors flex-shrink-0 cursor-pointer ${
+                    settings.notifications[n.key] ? 'bg-[#22c55e]' : 'bg-white/20'
                   }`}
                 >
                   <motion.div
-                    className="w-5 h-5 rounded-full bg-white shadow-md"
-                    animate={{ x: settings.notifications[n.key] ? 20 : 0 }}
+                    className="w-6 h-6 rounded-full bg-white shadow-md"
+                    animate={{ x: settings.notifications[n.key] ? 24 : 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 </button>
@@ -1225,9 +1966,9 @@ function SettingsPage({ onSettingsUpdate }) {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="badge-citrus text-white font-mono text-xs uppercase tracking-wider px-6 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity min-h-[44px]"
+            className="btn-action-green text-white font-body text-base font-bold px-8 py-3.5 rounded-2xl flex items-center gap-2.5 shadow-xl min-h-[50px] cursor-pointer"
           >
-            <Save size={16} /> Simpan Pengaturan
+            <Save size={20} /> Simpan Pengaturan
           </button>
         </div>
       </form>
@@ -1240,12 +1981,21 @@ function SettingsPage({ onSettingsUpdate }) {
 export default function AdminDashboard() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [notifications] = useState(3)
+  const [notifications, setNotifications] = useState(3)
+  const [showNotifications, setShowNotifications] = useState(false)
   const [farmSettings, setFarmSettings] = useState(null)
+
+  const updateNotifCount = useCallback(() => {
+    fetchFarmNotifications().then(items => {
+      const unread = items.filter(i => i.unread).length
+      setNotifications(unread)
+    })
+  }, [])
 
   useEffect(() => {
     fetchFarmSettings().then(setFarmSettings)
-  }, [])
+    updateNotifCount()
+  }, [updateNotifCount])
 
   // Close sidebar on route change (mobile nav)
   useEffect(() => { setSidebarOpen(false) }, [location.pathname])
@@ -1360,8 +2110,10 @@ export default function AdminDashboard() {
             {/* Notification bell */}
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.94 }}
-              className="relative p-2.5 rounded-lg glass-card hover:bg-white/[0.06] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2.5 rounded-lg glass-card hover:bg-white/[0.06] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
               id="notifications-btn"
+              title={`${notifications} notifikasi aktif kebun`}
               aria-label={`${notifications} notifikasi`}
             >
               <Bell size={16} className="text-[#9e7a50]" />
@@ -1375,16 +2127,16 @@ export default function AdminDashboard() {
               )}
             </motion.button>
 
-            {/* Public page link — hidden on very small screens */}
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-[#9e7a50] glass-card px-3 py-2.5 rounded-xl hover:text-[#ffa720] hover:bg-[#ffa72010] transition-all duration-200 min-h-[44px]"
+            {/* Public page link — visible on all screens */}
+            <Link
+              to="/"
+              id="header-public-page-btn"
+              className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[#ffa720] glass-card px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl hover:bg-[#ffa720]/15 border border-[#ffa720]/30 transition-all duration-200 min-h-[44px] whitespace-nowrap shrink-0"
+              title="Buka Halaman Publik (Keterlacakan)"
             >
-              <QrCode size={13} />
-              <span className="hidden md:inline">Halaman Publik</span>
-            </a>
+              <QrCode size={16} />
+              <span className="text-xs">Halaman Publik</span>
+            </Link>
           </div>
         </header>
 
@@ -1402,6 +2154,14 @@ export default function AdminDashboard() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Render Notification Flyout if active */}
+      {showNotifications && (
+        <NotificationFlyout
+          onClose={() => setShowNotifications(false)}
+          onClearAll={() => setNotifications(0)}
+        />
+      )}
     </div>
   )
 }

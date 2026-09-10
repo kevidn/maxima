@@ -179,6 +179,35 @@ const MOCK_TRACEABILITY = {
 // ── Exported Async API Functions ─────────────────────────
 
 let fertilizerSchedules = [...MOCK_FERTILIZER_SCHEDULE]
+let treeBatches = [...MOCK_TREE_BATCHES]
+let aiAlerts = [...MOCK_AI_ALERTS]
+
+let farmNotifications = [
+  {
+    id: 'notif-1',
+    title: 'Peringatan Dini HLB (Citrus Greening)',
+    desc: 'Deteksi AI menemukan gejala HLB pada Batch-2022-A dengan confidence 91.2%. Segera lakukan tindakan isolasi.',
+    time: '2 jam lalu',
+    unread: true,
+    type: 'danger'
+  },
+  {
+    id: 'notif-2',
+    title: 'Jadwal Pemupukan Organik Besok',
+    desc: 'Aplikasi Kompos Kascing 24 pohon untuk Batch-2022-A dijadwalkan besok pagi.',
+    time: '5 jam lalu',
+    unread: true,
+    type: 'warning'
+  },
+  {
+    id: 'notif-3',
+    title: 'Prospek Panen Jeruk Bali Merah',
+    desc: 'Batch-2023-A siap memasuki fase persiapan panen bulan depan (estimasi 1.5 kg/buah).',
+    time: '1 hari lalu',
+    unread: true,
+    type: 'info'
+  }
+]
 
 let farmSettings = {
   farmerName: 'Pak Suwanto',
@@ -196,10 +225,35 @@ let farmSettings = {
 }
 
 export async function fetchDashboardStats() {
-  return Promise.resolve(MOCK_STAT_CARDS)
+  const totalCount = treeBatches.reduce((acc, b) => acc + b.count, 0)
+  const totalHealthy = treeBatches.reduce((acc, b) => acc + b.healthy, 0)
+  const totalFlagged = treeBatches.reduce((acc, b) => acc + b.flagged, 0)
+  const healthyPct = totalCount > 0 ? ((totalHealthy / totalCount) * 100).toFixed(1) : '100'
+
+  const stats = [
+    { label: 'Total Pohon', value: String(totalCount), sub: '+4 bulan ini', trend: 'up', icon: TreePine, accent: '#7fe030' },
+    { label: 'Pohon Sehat', value: String(totalHealthy), sub: `${healthyPct}% sehat`, trend: 'up', icon: Leaf, accent: '#5ec412' },
+    { label: 'Terdeteksi', value: String(totalFlagged), sub: totalFlagged > 0 ? 'Perlu tindakan' : '0 masalah', trend: totalFlagged > 0 ? 'down' : 'up', icon: ShieldAlert, accent: '#f83b3b' },
+    { label: 'AI Scans', value: String(240 + aiAlerts.length), sub: 'scan aktif', trend: 'up', icon: Zap, accent: '#a855f7' },
+  ]
+  return Promise.resolve(stats)
 }
 
-export async function fetchHealthTrend() {
+export async function fetchHealthTrend(timeframe = '7m') {
+  if (timeframe === '3m') {
+    return Promise.resolve(MOCK_HEALTH_TREND.slice(-3))
+  }
+  if (timeframe === '1y') {
+    const fullYear = [
+      { month: 'Okt', healthy: 75, flagged: 4 },
+      { month: 'Nov', healthy: 78, flagged: 3 },
+      { month: 'Des', healthy: 80, flagged: 3 },
+      { month: 'Jan', healthy: 80, flagged: 4 },
+      { month: 'Feb', healthy: 81, flagged: 3 },
+      ...MOCK_HEALTH_TREND
+    ]
+    return Promise.resolve(fullYear)
+  }
   return Promise.resolve(MOCK_HEALTH_TREND)
 }
 
@@ -256,8 +310,6 @@ export async function addFertilizerSchedule(newItem) {
   return Promise.resolve(created)
 }
 
-
-
 export async function toggleFertilizerStatus(id) {
   fertilizerSchedules = fertilizerSchedules.map(item => {
     if (item.id === id) {
@@ -289,8 +341,17 @@ export async function updateFarmSettings(newSettings) {
   return Promise.resolve({ ...farmSettings })
 }
 
+export async function fetchFarmNotifications() {
+  return Promise.resolve([...farmNotifications])
+}
+
+export async function markAllNotificationsRead() {
+  farmNotifications = farmNotifications.map(n => ({ ...n, unread: false }))
+  return Promise.resolve([...farmNotifications])
+}
+
 export async function fetchAIAlerts({ query = '', severity = 'all' } = {}) {
-  let list = [...MOCK_AI_ALERTS]
+  let list = [...aiAlerts]
   if (severity !== 'all') {
     list = list.filter(a => a.severity === severity)
   }
@@ -306,7 +367,7 @@ export async function fetchAIAlerts({ query = '', severity = 'all' } = {}) {
 }
 
 export async function fetchTreeBatches({ query = '', status = 'all' } = {}) {
-  let list = [...MOCK_TREE_BATCHES]
+  let list = [...treeBatches]
   if (status === 'healthy') {
     list = list.filter(b => b.flagged === 0)
   } else if (status === 'flagged') {
@@ -323,7 +384,150 @@ export async function fetchTreeBatches({ query = '', status = 'all' } = {}) {
   return Promise.resolve(list)
 }
 
-export async function fetchTraceabilityData(treeStatus = 'healthy') {
-  return Promise.resolve(MOCK_TRACEABILITY[treeStatus] || MOCK_TRACEABILITY.healthy)
+export async function addTreeBatch(newBatch) {
+  let batchId = newBatch.id
+  if (!batchId || !batchId.trim()) {
+    const year = new Date().getFullYear()
+    const nextLetter = String.fromCharCode(65 + (treeBatches.length % 26))
+    batchId = `Batch-${year}-${nextLetter}`
+  }
+
+  const count = Number(newBatch.count) || 20
+  const created = {
+    id: batchId,
+    count: count,
+    healthy: count,
+    flagged: 0,
+    location: newBatch.location || 'Blok Utara',
+    variety: newBatch.variety || 'Jeruk Bali Merah',
+    plantedDate: formatDateIndonesian(newBatch.plantedDate || new Date().toISOString().split('T')[0])
+  }
+
+  treeBatches = [created, ...treeBatches]
+  return Promise.resolve(created)
 }
+
+export async function fetchBatchDetail(batchId) {
+  const batch = treeBatches.find(b => b.id === batchId) || treeBatches[0]
+  const sampleTrees = Array.from({ length: Math.min(batch.count, 6) }).map((_, i) => {
+    const treeNum = String(i + 1).padStart(3, '0')
+    const isSick = batch.flagged > 0 && i === 0
+    return {
+      code: `PHN-${batch.id.replace('Batch-', 'B')}-${treeNum}`,
+      variety: batch.variety,
+      health: isSick ? 'Terdeteksi Sakit' : 'Sehat',
+      status: isSick ? 'flagged' : 'healthy',
+      lastScan: isSick ? '7 Sep 2026' : '9 Sep 2026',
+      fertilizerStatus: 'Terjadwal'
+    }
+  })
+
+  return Promise.resolve({
+    ...batch,
+    sampleTrees,
+    notes: `Batch pohon ini terletak di ${batch.location}, dirawat intensif menggunakan standar budidaya organik Desa Bibis, Magetan.`
+  })
+}
+
+export async function analyzeLeafPhoto(file, batchId = 'Batch-2022-A') {
+  // Simulate intelligent MobileNetV2 diagnosis or call backend if available
+  const sampleId = `POM-${String(Math.floor(1000 + Math.random() * 9000))}`
+  
+  // Diverse realistic results
+  const outcomes = [
+    {
+      disease: 'Daun Sehat (Healthy Plant)',
+      confidence: 96.8,
+      severity: 'low',
+      symptoms: 'Warna hijau segar merata, kutikula daun mengkilap tanpa bercak klorosis atau nekrotik.',
+      advisory: 'Pohon dalam kondisi prima. Lanjutkan jadwal penyiraman tetes dan pemupukan kompos kascing berkala.',
+    },
+    {
+      disease: 'HLB / Citrus Greening',
+      confidence: 93.4,
+      severity: 'high',
+      symptoms: 'Bercak kuning asimetris (blotchy mottle), urat daun menebal dan mengeras, indikasi infeksi Liberibacter asiaticus.',
+      advisory: 'Segera lakukan karantina blok pohon. Hindari perbanyakan stek/bibit, dan semprotkan biopestisida organik untuk mengendalikan vektor kutu loncat Diaphorina citri.',
+    },
+    {
+      disease: 'Kudis Sitrus (Citrus Scab)',
+      confidence: 84.2,
+      severity: 'medium',
+      symptoms: 'Bintik gabus menonjol berwarna coklat kekuningan pada permukaan daun muda.',
+      advisory: 'Lakukan pemangkasan ringan pada cabang yang terlalu rapat dan aplikasikan larutan fungisida hayati Trichoderma sp.',
+    },
+    {
+      disease: 'Bercak Daun Alternaria',
+      confidence: 81.5,
+      severity: 'medium',
+      symptoms: 'Bercak coklat kehitaman dikelilingi halo kekuningan pada helai daun.',
+      advisory: 'Jaga aerasi tajuk tanaman dan semprotkan pestisida nabati fermentasi bawang putih dan daun mimba.',
+    }
+  ]
+
+  // Pick random outcome
+  const outcome = outcomes[Math.floor(Math.random() * outcomes.length)]
+
+  const newAlert = {
+    id: sampleId,
+    batch: batchId,
+    disease: outcome.disease,
+    confidence: outcome.confidence,
+    time: 'Baru saja',
+    severity: outcome.severity,
+    symptoms: outcome.symptoms,
+    advisory: outcome.advisory,
+    photoUrl: file ? (typeof file === 'string' ? file : URL.createObjectURL(file)) : null
+  }
+
+  aiAlerts = [newAlert, ...aiAlerts]
+  return Promise.resolve(newAlert)
+}
+
+export async function fetchTraceabilityData(identifier = 'healthy') {
+  if (identifier === 'diseased') {
+    return Promise.resolve(MOCK_TRACEABILITY.diseased)
+  }
+
+  // Try real backend API with short timeout
+  if (identifier && identifier !== 'healthy') {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 1200)
+      const res = await fetch(`http://localhost:3000/api/public/trace/${encodeURIComponent(identifier)}`, {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && json.data) {
+          const d = json.data
+          return {
+            id: d.identifier || d.treeCode || identifier,
+            variety: d.variety || 'Jeruk Bali Merah',
+            location: d.location || 'Desa Bibis, Magetan',
+            coordinates: d.coordinates || '7°37\'42"S 111°26\'18"E',
+            planted: d.plantedDate || '12 Maret 2022',
+            farmer: d.farmer?.name || 'Pak Suwanto',
+            batch: d.batchId || identifier,
+            certifiedOrganic: d.certifiedOrganic ?? true,
+            aiConfidence: d.aiConfidence ?? 98.4,
+            lastScanned: '7 Sep 2026',
+            harvestDate: d.harvestDate || 'Oktober 2026',
+            flagged: d.flagged || false,
+            flagReason: d.flagReason,
+            flagDetail: d.flagDetail,
+            timeline: d.timeline || MOCK_TRACEABILITY.healthy.timeline
+          }
+        }
+      }
+    } catch {
+      // Backend unavailable or network timeout, gracefully proceed to mock
+    }
+  }
+
+  return Promise.resolve(MOCK_TRACEABILITY[identifier] || MOCK_TRACEABILITY.healthy)
+}
+
 

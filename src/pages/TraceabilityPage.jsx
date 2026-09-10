@@ -6,10 +6,12 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import {
   Leaf, Droplets, FlaskConical, PackageCheck, ShieldCheck,
   ShieldX, MapPin, CalendarDays, Sprout, Zap, AlertTriangle,
-  ChevronDown, ExternalLink, QrCode, Info, Clock, Printer, Share2
+  ChevronDown, ExternalLink, QrCode, Info, Clock, Printer, Share2,
+  LayoutDashboard, Check
 } from 'lucide-react'
 import { fetchTraceabilityData } from '../services/treeService'
 
@@ -147,20 +149,20 @@ function TimelineEntry({ item, index, totalItems }) {
 
       {/* Content */}
       <div className="flex-1 min-w-0 pb-7">
-        <div className="flex items-start justify-between gap-2 mb-1">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="min-w-0">
-            <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em]" style={{ color: item.accent }}>
+            <span className="font-mono text-xs sm:text-sm uppercase tracking-[0.14em] font-bold" style={{ color: item.accent }}>
               {item.phase}
             </span>
-            <h3 className="font-heading text-lg sm:text-xl font-semibold text-[#fdf6f0] leading-tight mt-0.5">
+            <h3 className="font-heading text-xl sm:text-2xl font-bold text-[#fdf6f0] leading-tight mt-0.5">
               {item.label}
             </h3>
           </div>
-          <span className="font-mono text-[9px] text-[#9e7a50] bg-white/[0.04] border border-white/[0.06] rounded-lg px-2 py-1 flex-shrink-0 mt-1 whitespace-nowrap">
+          <span className="font-mono text-xs sm:text-sm font-bold text-[#dacdb8] bg-white/[0.08] border border-white/[0.12] rounded-xl px-3 py-1.5 flex-shrink-0 mt-1 whitespace-nowrap">
             {item.date}
           </span>
         </div>
-        <p className="font-body text-sm text-[#dacdb8]/70 leading-relaxed">{item.detail}</p>
+        <p className="font-body text-base text-[#dacdb8] leading-relaxed font-medium">{item.detail}</p>
 
         {/* Fertilizer history toggle */}
         {item.entries && (
@@ -169,15 +171,15 @@ function TimelineEntry({ item, index, totalItems }) {
             <button
               id={`expand-${item.id}`}
               onClick={() => setExpanded(!expanded)}
-              className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider min-h-[36px] no-print"
+              className="mt-3 flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider font-bold min-h-[44px] no-print cursor-pointer"
               style={{ color: item.accent }}
             >
               <ChevronDown
-                size={13}
+                size={16}
                 className="transition-transform duration-300"
                 style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
               />
-              {expanded ? 'Sembunyikan' : 'Lihat riwayat lengkap'}
+              {expanded ? 'Sembunyikan' : 'Lihat riwayat lengkap pupuk'}
             </button>
             <AnimatePresence>
               {expanded && (
@@ -189,10 +191,10 @@ function TimelineEntry({ item, index, totalItems }) {
                   className="overflow-hidden"
                 >
                   {/* overflow-x-auto prevents horizontal overflow on narrow screens */}
-                  <div className="mt-3 rounded-xl overflow-hidden border border-white/[0.06] overflow-x-auto">
-                    <table className="data-table w-full min-w-[280px]">
+                  <div className="mt-3 rounded-2xl overflow-hidden border border-white/[0.1] overflow-x-auto shadow-lg">
+                    <table className="data-table w-full min-w-[300px]">
                       <thead>
-                        <tr style={{ background: 'rgba(249,130,8,0.06)' }}>
+                        <tr style={{ background: 'rgba(249,130,8,0.12)' }}>
                           <th>Tanggal</th>
                           <th>Jenis Pupuk</th>
                           <th>Dosis</th>
@@ -201,9 +203,9 @@ function TimelineEntry({ item, index, totalItems }) {
                       <tbody>
                         {item.entries.map((e, i) => (
                           <tr key={i}>
-                            <td>{e.date}</td>
-                            <td>{e.type}</td>
-                            <td style={{ color: item.accent }}>{e.dose}</td>
+                            <td className="font-semibold text-sm">{e.date}</td>
+                            <td className="font-medium text-sm text-[#fdf6f0]">{e.type}</td>
+                            <td className="font-bold text-sm" style={{ color: item.accent }}>{e.dose}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -224,34 +226,34 @@ function DiseasedWarningBanner({ tree }) {
   return (
     <motion.div
       variants={dangerVariants}
-      className="glass-card-danger p-4 sm:p-6 mb-6 sm:mb-8 relative overflow-hidden"
+      className="glass-card-danger p-5 sm:p-6 mb-6 sm:mb-8 relative overflow-hidden shadow-2xl border-2 border-red-500/70"
     >
       <div
-        className="absolute inset-0 rounded-3xl opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at 50% 0%, #f83b3b, transparent 70%)', animation: 'danger-pulse 2s ease-in-out infinite' }}
+        className="absolute inset-0 rounded-3xl opacity-25 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, #dc2626, transparent 70%)', animation: 'danger-pulse 2s ease-in-out infinite' }}
       />
-      <div className="relative z-10 flex gap-3 sm:gap-4">
+      <div className="relative z-10 flex gap-4 sm:gap-5">
         <div className="flex-shrink-0">
           <motion.div
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-pomelo-900/60 border border-pomelo-500/40 flex items-center justify-center"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-red-950/80 border-2 border-red-500/80 flex items-center justify-center shadow-lg"
             animate={{ scale: [1, 1.06, 1] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <ShieldX size={22} className="text-pomelo-400" />
+            <ShieldX size={28} className="text-red-400" />
           </motion.div>
         </div>
         <div className="min-w-0">
-          <span className="badge-danger text-white font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.15em] px-2 sm:px-2.5 py-1 rounded-lg inline-block">
+          <span className="badge-danger text-white font-mono text-xs uppercase tracking-[0.15em] px-3 py-1.5 rounded-xl inline-block font-bold">
             ⚠ Akses Ditolak — Terdeteksi Penyakit
           </span>
-          <h3 className="font-heading text-xl sm:text-2xl font-bold text-pomelo-300 mt-2 mb-1.5 leading-tight">
+          <h3 className="font-heading text-2xl sm:text-3xl font-bold text-red-200 mt-2 mb-2 leading-tight">
             Pohon Ini Tidak Dapat Diperdagangkan
           </h3>
-          <p className="font-body text-sm text-pomelo-200/70 leading-relaxed">{tree.flagReason}</p>
-          <div className="mt-3 glass-card p-3 rounded-xl">
-            <div className="flex items-start gap-2">
-              <Info size={12} className="text-pomelo-400 mt-0.5 flex-shrink-0" />
-              <p className="font-mono text-[9px] text-pomelo-200/60 leading-relaxed">{tree.flagDetail}</p>
+          <p className="font-body text-base text-red-100/90 leading-relaxed font-medium">{tree.flagReason}</p>
+          <div className="mt-3.5 glass-card p-3.5 rounded-2xl bg-black/40 border border-red-500/30">
+            <div className="flex items-start gap-2.5">
+              <Info size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="font-mono text-xs text-red-200/90 leading-relaxed font-semibold">{tree.flagDetail}</p>
             </div>
           </div>
         </div>
@@ -262,20 +264,33 @@ function DiseasedWarningBanner({ tree }) {
 
 // ── Main Page ─────────────────────────────────────────────
 export default function TraceabilityPage({ treeStatus = 'healthy' }) {
-  const isDiseased = treeStatus === 'diseased'
+  const { treeId } = useParams()
+  const queryIdentifier = treeId || treeStatus
   const [tree, setTree] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+
+  const isDiseased = queryIdentifier === 'diseased' || Boolean(tree?.flagged)
 
   useEffect(() => {
     let isMounted = true
-    fetchTraceabilityData(treeStatus).then((data) => {
+    setLoading(true)
+    fetchTraceabilityData(queryIdentifier).then((data) => {
       if (isMounted) {
         setTree(data)
-        setTimeout(() => setLoading(false), 400)
+        setTimeout(() => setLoading(false), 300)
       }
     })
     return () => { isMounted = false }
-  }, [treeStatus])
+  }, [queryIdentifier])
+
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }
+  }
 
   if (!tree && !loading) return null
 
@@ -324,22 +339,35 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
           >
 
             {/* ── Top bar ── */}
-            <motion.div variants={itemVariants} className="flex items-center justify-between mb-6 sm:mb-8">
-              <div className="flex items-center gap-2">
-                {/* Smaller icon on mobile */}
-                <div className="w-10 h-10 sm:w-auto sm:h-auto">
-                  <PomeloSVGIcon size={40} />
+            <motion.div variants={itemVariants} className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 sm:w-auto sm:h-auto flex-shrink-0">
+                  <PomeloSVGIcon size={44} />
                 </div>
-                <div>
-                  <div className="font-display text-sm sm:text-base tracking-[0.08em] text-[#ffa720]">POMELO TRACE</div>
-                  <div className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50] tracking-widest">DESA BIBIS · MAGETAN</div>
+                <div className="min-w-0">
+                  <div className="font-display text-base sm:text-lg tracking-[0.08em] text-[#ffa720] font-bold truncate">POMELO TRACE</div>
+                  <div className="font-mono text-xs text-[#dacdb8] tracking-widest font-semibold truncate">DESA BIBIS · MAGETAN</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`status-dot ${isDiseased ? 'danger' : 'healthy'}`} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-[#9e7a50]">
-                  {isDiseased ? 'FLAGGED' : 'VERIFIED'}
-                </span>
+
+              {/* Status & Prominent Admin Panel Button */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <div className="hidden xs:flex sm:flex items-center gap-1.5">
+                  <span className={`status-dot ${isDiseased ? 'danger' : 'healthy'}`} style={{ width: 10, height: 10 }} />
+                  <span className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: isDiseased ? '#f87171' : '#4ade80' }}>
+                    {isDiseased ? 'SAKIT' : 'TERUJI'}
+                  </span>
+                </div>
+
+                <Link
+                  to="/admin"
+                  id="header-admin-btn"
+                  className="btn-action-yellow text-black font-body text-xs sm:text-sm font-extrabold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-1.5 shadow-lg min-h-[44px] cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                  title="Buka Admin Panel"
+                >
+                  <LayoutDashboard size={17} />
+                  <span>Admin Panel</span>
+                </Link>
               </div>
             </motion.div>
 
@@ -347,75 +375,74 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
             {isDiseased && <DiseasedWarningBanner tree={tree} />}
 
             {/* ── Hero identity card ── */}
-            <motion.div variants={cardVariants} className={`glass-card${isDiseased ? '-danger' : '-warm'} p-4 sm:p-6 mb-5 sm:mb-6`}>
-              {/* Stack vertically on very small screens, row on sm+ */}
+            <motion.div variants={cardVariants} className={`glass-card${isDiseased ? '-danger' : '-warm'} p-5 sm:p-6 mb-5 sm:mb-6 shadow-xl border-2 ${isDiseased ? 'border-red-500/50' : 'border-[#ffa720]/40'}`}>
               <div className="flex flex-col xs:flex-row sm:flex-row items-start gap-4 sm:gap-5">
                 <div
-                  className={`authentic-stamp w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center flex-shrink-0`}
-                  style={{ borderColor: isDiseased ? 'rgba(248,59,59,0.3)' : 'rgba(255,167,32,0.3)' }}
+                  className={`authentic-stamp w-18 h-18 sm:w-22 sm:h-22 flex items-center justify-center flex-shrink-0`}
+                  style={{ borderColor: isDiseased ? 'rgba(239,68,68,0.5)' : 'rgba(255,167,32,0.5)' }}
                 >
-                  <PomeloSVGIcon size={52} />
+                  <PomeloSVGIcon size={58} />
                 </div>
                 <div className="flex-1 min-w-0">
                   {isDiseased ? (
-                    <span className="badge-danger text-white font-mono text-[8px] uppercase tracking-[0.14em] px-2 py-1 rounded-lg">
+                    <span className="badge-danger text-white font-mono text-xs uppercase tracking-[0.14em] px-3 py-1.5 rounded-xl font-bold">
                       Terdeteksi Sakit
                     </span>
                   ) : (
-                    <span className="badge-lime text-white font-mono text-[8px] uppercase tracking-[0.14em] px-2 py-1 rounded-lg">
+                    <span className="badge-lime text-white font-mono text-xs uppercase tracking-[0.14em] px-3 py-1.5 rounded-xl font-bold">
                       ✓ Organik Tersertifikasi
                     </span>
                   )}
                   <h1
-                    className="font-heading text-2xl sm:text-3xl font-bold leading-tight mt-2"
-                    style={{ color: isDiseased ? '#ffa0a0' : '#fdf6f0' }}
+                    className="font-heading text-3xl sm:text-4xl font-bold leading-tight mt-2.5"
+                    style={{ color: isDiseased ? '#fca5a5' : '#fdf6f0' }}
                   >
                     {tree.variety}
                   </h1>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-[#9e7a50]">
-                    <MapPin size={10} className="flex-shrink-0" />
-                    <span className="font-mono text-[9px] sm:text-[10px] truncate">{tree.location}</span>
+                  <div className="flex items-center gap-2 mt-2 text-[#dacdb8]">
+                    <MapPin size={16} className="text-[#ffa720] flex-shrink-0" />
+                    <span className="font-mono text-xs sm:text-sm font-semibold truncate">{tree.location}</span>
                   </div>
-                  <div className="font-mono text-[8px] text-[#9e7a50]/60 mt-0.5 hidden sm:block">
-                    {tree.coordinates}
+                  <div className="font-mono text-xs text-[#dacdb8] mt-1 font-medium hidden sm:block">
+                    Koordinat: {tree.coordinates}
                   </div>
                 </div>
               </div>
 
-              {/* Stats row — 3 equal columns, truncate prevents overflow */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-white/[0.06]">
+              {/* Stats row — 3 equal columns */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-5 pt-4 border-t border-white/[0.1]">
                 {[
                   { label: 'ID Pohon', value: tree.id,      Icon: QrCode      },
                   { label: 'Petani',   value: tree.farmer,  Icon: Leaf        },
                   { label: 'Batch',    value: tree.batch,   Icon: PackageCheck },
                 ].map((stat) => (
                   <div key={stat.label} className="text-center px-1">
-                    <stat.Icon size={13} className="mx-auto mb-1 text-[#9e7a50]" />
-                    <div className="font-mono text-[7px] sm:text-[8px] uppercase tracking-[0.1em] text-[#9e7a50] mb-0.5">{stat.label}</div>
-                    <div className="font-mono text-[10px] sm:text-[11px] text-[#dacdb8] truncate">{stat.value}</div>
+                    <stat.Icon size={18} className="mx-auto mb-1 text-[#ffa720]" />
+                    <div className="font-mono text-xs uppercase tracking-wider text-[#ffa720] mb-0.5 font-bold">{stat.label}</div>
+                    <div className="font-mono text-xs sm:text-sm text-[#fdf6f0] font-bold truncate">{stat.value}</div>
                   </div>
                 ))}
               </div>
             </motion.div>
 
             {/* ── AI Confidence card ── */}
-            <motion.div variants={cardVariants} className="glass-card p-4 sm:p-5 mb-5 sm:mb-6 flex items-center gap-4 sm:gap-5">
+            <motion.div variants={cardVariants} className="glass-card p-4 sm:p-5 mb-5 sm:mb-6 flex items-center gap-4 sm:gap-5 shadow-lg border border-white/[0.1]">
               <AIConfidenceMeter value={tree.aiConfidence} isDiseased={isDiseased} />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-[#9e7a50] mb-1">
+                <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#ffa720] font-bold mb-1">
                   Analisis AI — MobileNetV2
                 </div>
-                <h2 className="font-heading text-base sm:text-lg font-semibold text-[#fdf6f0] leading-tight">
+                <h2 className="font-heading text-lg sm:text-xl font-bold text-[#fdf6f0] leading-tight">
                   {isDiseased ? 'Penyakit HLB Terdeteksi' : 'Pohon Sehat & Bebas Penyakit'}
                 </h2>
-                <p className="font-body text-xs text-[#dacdb8]/60 mt-1 leading-relaxed line-clamp-2">
+                <p className="font-body text-sm sm:text-base text-[#dacdb8] mt-1 leading-relaxed font-medium">
                   {isDiseased
-                    ? 'Distribusi diblokir otomatis. Notifikasi ke Dinas Pertanian.'
-                    : 'Tidak ada patogen pada 7 sampel foto daun terbaru.'}
+                    ? 'Distribusi diblokir otomatis demi standar mutu ekspor.'
+                    : 'Hasil scan daun menyatakan daun sehat, segar, dan bebas penyakit.'}
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <Clock size={9} className="text-[#9e7a50] flex-shrink-0" />
-                  <span className="font-mono text-[8px] sm:text-[9px] text-[#9e7a50]">Scan: {tree.lastScanned}</span>
+                  <Clock size={14} className="text-[#ffa720] flex-shrink-0" />
+                  <span className="font-mono text-xs text-[#dacdb8] font-semibold">Scan: {tree.lastScanned}</span>
                 </div>
               </div>
             </motion.div>
@@ -424,11 +451,11 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
             {!isDiseased && (
               <motion.div variants={itemVariants} className="mb-5 sm:mb-6">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#ffa72030] to-transparent" />
-                  <span className="font-display text-[9px] sm:text-xs tracking-[0.18em] sm:tracking-[0.2em] text-[#ffa720]/70 px-2 sm:px-3 whitespace-nowrap">
-                    TANAH KE MEJA
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#ffa72050] to-transparent" />
+                  <span className="font-display text-xs sm:text-sm tracking-[0.2em] text-[#ffa720] px-3 font-bold whitespace-nowrap">
+                    TANAH KE MEJA (TRACEABILITY)
                   </span>
-                  <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#ffa72030] to-transparent" />
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#ffa72050] to-transparent" />
                 </div>
               </motion.div>
             )}
@@ -444,50 +471,75 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
 
             {/* ── Harvest card ── */}
             {!isDiseased && tree?.harvestDate && (
-              <motion.div variants={cardVariants} className="glass-card-warm p-4 sm:p-5 mt-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl badge-citrus flex items-center justify-center flex-shrink-0">
-                    <CalendarDays size={18} className="text-white" />
+              <motion.div variants={cardVariants} className="glass-card-warm p-5 mt-3 shadow-xl border border-[#ffa720]/30">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl btn-action-yellow flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CalendarDays size={22} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-[#f98208]">Target Panen</div>
-                    <div className="font-heading text-xl sm:text-2xl font-semibold text-[#fdf6f0]">{tree.harvestDate}</div>
+                    <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#ffa720] font-bold">Target Panen</div>
+                    <div className="font-heading text-2xl sm:text-3xl font-bold text-[#fdf6f0]">{tree.harvestDate}</div>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {/* ── Print / Save Action Bar ── */}
-            <motion.div variants={itemVariants} className="mt-6 flex items-center justify-center gap-3 no-print">
+            {/* ── Print / Save / Share Action Bar ── */}
+            <motion.div variants={itemVariants} className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 no-print">
               <button
                 onClick={() => window.print()}
-                className="badge-citrus text-white font-mono text-[10px] uppercase tracking-wider px-5 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity min-h-[44px]"
+                className="w-full sm:w-auto btn-action-green text-white font-body text-base font-bold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2.5 min-h-[50px] shadow-xl cursor-pointer"
               >
-                <Printer size={14} /> Cetak / Simpan Kartu
+                <Printer size={18} /> Cetak Kartu Lacak
               </button>
+              <button
+                id="share-trace-btn"
+                onClick={handleShare}
+                className="w-full sm:w-auto btn-action-yellow text-black font-body text-base font-extrabold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2.5 min-h-[50px] shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all"
+              >
+                {copied ? <Check size={18} /> : <Share2 size={18} />}
+                <span>{copied ? '✓ Tautan Tersalin!' : 'Bagikan / Salin Tautan'}</span>
+              </button>
+            </motion.div>
+
+            {/* ── Prominent Admin Panel Portal Card (Unmissable) ── */}
+            <motion.div variants={itemVariants} className="mt-8 no-print">
+              <Link
+                to="/admin"
+                id="footer-admin-btn"
+                className="w-full glass-card-warm p-4 sm:p-5 rounded-2xl border-2 border-[#ffa720]/40 hover:border-[#ffa720] flex items-center justify-between gap-4 transition-all shadow-xl group cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl btn-action-yellow flex items-center justify-center flex-shrink-0 shadow-md">
+                    <LayoutDashboard size={24} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-mono text-xs uppercase tracking-wider text-[#ffa720] font-bold">Portal Pengelola Kebun</div>
+                    <div className="font-heading text-lg sm:text-xl font-bold text-[#fdf6f0] group-hover:text-[#ffa720] transition-colors">
+                      Masuk ke Admin Dashboard & Kontrol
+                    </div>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center flex-shrink-0 text-[#ffa720] group-hover:translate-x-1 transition-transform">
+                  <ExternalLink size={20} />
+                </div>
+              </Link>
             </motion.div>
 
             {/* ── Footer ── */}
             <motion.div variants={itemVariants} className="mt-8 sm:mt-10 text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 {isDiseased
-                  ? <ShieldX size={13} className="text-pomelo-500" />
-                  : <ShieldCheck size={13} className="text-lime-500" />
+                  ? <ShieldX size={16} className="text-red-400" />
+                  : <ShieldCheck size={16} className="text-lime-400" />
                 }
-                <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-[#9e7a50]">
+                <span className="font-mono text-xs uppercase tracking-[0.14em] font-semibold text-[#dacdb8]">
                   {isDiseased ? 'Diblokir oleh Sistem AI' : 'Diverifikasi oleh Sistem AI'}
                 </span>
               </div>
-              <div className="font-mono text-[8px] text-[#9e7a50]/50">
+              <div className="font-mono text-xs text-[#dacdb8]/70">
                 Pomelo Trace · © 2026 Desa Bibis Digital Farm
               </div>
-              {/* min-h-[44px] touch target */}
-              <a
-                href="/admin"
-                className="inline-flex items-center justify-center gap-1.5 mt-4 font-mono text-[9px] uppercase tracking-wider text-[#9e7a50]/50 hover:text-[#ffa720] transition-colors duration-200 min-h-[44px] px-4 no-print"
-              >
-                Admin Panel <ExternalLink size={9} />
-              </a>
             </motion.div>
 
 
