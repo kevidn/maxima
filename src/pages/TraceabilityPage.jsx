@@ -9,91 +9,9 @@ import { useState, useEffect } from 'react'
 import {
   Leaf, Droplets, FlaskConical, PackageCheck, ShieldCheck,
   ShieldX, MapPin, CalendarDays, Sprout, Zap, AlertTriangle,
-  ChevronDown, ExternalLink, QrCode, Info, Clock
+  ChevronDown, ExternalLink, QrCode, Info, Clock, Printer, Share2
 } from 'lucide-react'
-
-// ── Mock data ─────────────────────────────────────────────
-const HEALTHY_TREE = {
-  id: 'POM-BBS-0047',
-  variety: 'Jeruk Bali Merah',
-  location: 'Desa Bibis, Magetan',
-  coordinates: '7°37\'42"S 111°26\'18"E',
-  planted: '12 Maret 2022',
-  farmer: 'Pak Suwanto',
-  batch: 'Batch-2022-A',
-  certifiedOrganic: true,
-  aiConfidence: 98.4,
-  lastScanned: '7 Sep 2026',
-  harvestDate: 'Oktober 2026',
-  timeline: [
-    {
-      id: 'seed',
-      icon: Sprout,
-      phase: 'Pembibitan',
-      label: 'Bibit Ditanam',
-      date: '12 Mar 2022',
-      detail: 'Bibit varietas Jeruk Bali Merah dari persemaian bersertifikat. Media: campuran tanah liat + kompos organik.',
-      accent: '#7fe030',
-      bgAccent: 'rgba(127,224,48,0.08)',
-    },
-    {
-      id: 'water',
-      icon: Droplets,
-      phase: 'Irigasi',
-      label: 'Program Irigasi Tetes',
-      date: 'Apr 2022 – kini',
-      detail: 'Irigasi tetes otomatis 2× sehari. Volume: 4L/pohon/hari. Sumber: mata air alami Gunung Lawu.',
-      accent: '#4aadcc',
-      bgAccent: 'rgba(74,173,204,0.08)',
-    },
-    {
-      id: 'fertilize',
-      icon: FlaskConical,
-      phase: 'Pemupukan',
-      label: 'Jadwal Pupuk Organik',
-      date: 'Setiap 3 Bulan',
-      detail: 'Pupuk kompos kascing + fermentasi MOL bonggol pisang. Dosis: 2kg/aplikasi. Terakhir: 15 Agustus 2026.',
-      accent: '#f98208',
-      bgAccent: 'rgba(249,130,8,0.08)',
-      entries: [
-        { date: 'Mar 2022', type: 'Starter Organik',  dose: '1.5 kg'   },
-        { date: 'Jun 2022', type: 'Kompos Kascing',   dose: '2.0 kg'   },
-        { date: 'Sep 2022', type: 'MOL Bonggol',      dose: '1.5 L cair' },
-        { date: 'Des 2022', type: 'Kompos Kascing',   dose: '2.0 kg'   },
-        { date: 'Agu 2026', type: 'Pupuk Kalium Org.', dose: '2.0 kg'  },
-      ],
-    },
-    {
-      id: 'ai',
-      icon: Zap,
-      phase: 'Pemeriksaan AI',
-      label: 'Deteksi MobileNetV2',
-      date: '5 Sep 2026',
-      detail: 'Model AI MobileNetV2 menganalisis foto daun. Tidak ada indikasi penyakit HLB, kudis, atau antraknosa.',
-      accent: '#a855f7',
-      bgAccent: 'rgba(168,85,247,0.08)',
-    },
-    {
-      id: 'harvest',
-      icon: PackageCheck,
-      phase: 'Panen',
-      label: 'Target Panen',
-      date: 'Oktober 2026',
-      detail: 'Estimasi bobot buah: 1.2–1.8 kg/buah. Distribusi ke pasar lokal Magetan dan Surabaya.',
-      accent: '#ffa720',
-      bgAccent: 'rgba(255,167,32,0.08)',
-    },
-  ],
-}
-
-const DISEASED_TREE = {
-  ...HEALTHY_TREE,
-  id: 'POM-BBS-0031',
-  aiConfidence: 91.2,
-  flagged: true,
-  flagReason: 'Terdeteksi gejala Huanglongbing (HLB) / Citrus Greening Disease. Pohon ini tidak boleh dipanen atau diperdagangkan.',
-  flagDetail: 'Model AI MobileNetV2 mendeteksi pola daun "blotchy mottle" dan ukuran buah asimetris pada 3 dari 7 sampel foto. Confidence: 91.2%.',
-}
+import { fetchTraceabilityData } from '../services/treeService'
 
 // ── Animation variants ────────────────────────────────────
 const pageVariants = {
@@ -185,11 +103,20 @@ function AIConfidenceMeter({ value, isDiseased }) {
   )
 }
 
+const PHASE_ICONS = {
+  seed: Sprout,
+  water: Droplets,
+  fertilize: FlaskConical,
+  ai: Zap,
+  harvest: PackageCheck
+}
+
 // ── Timeline Entry ────────────────────────────────────────
-function TimelineEntry({ item, index }) {
+function TimelineEntry({ item, index, totalItems }) {
   const [expanded, setExpanded] = useState(false)
-  const Icon = item.icon
-  const isLast = index === HEALTHY_TREE.timeline.length - 1
+  const Icon = PHASE_ICONS[item.id] || Leaf
+
+  const isLast = index === totalItems - 1
 
   return (
     <motion.div variants={itemVariants} className="relative flex gap-4">
@@ -242,7 +169,7 @@ function TimelineEntry({ item, index }) {
             <button
               id={`expand-${item.id}`}
               onClick={() => setExpanded(!expanded)}
-              className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider min-h-[36px]"
+              className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider min-h-[36px] no-print"
               style={{ color: item.accent }}
             >
               <ChevronDown
@@ -336,13 +263,22 @@ function DiseasedWarningBanner({ tree }) {
 // ── Main Page ─────────────────────────────────────────────
 export default function TraceabilityPage({ treeStatus = 'healthy' }) {
   const isDiseased = treeStatus === 'diseased'
-  const tree = isDiseased ? DISEASED_TREE : HEALTHY_TREE
+  const [tree, setTree] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(t)
-  }, [])
+    let isMounted = true
+    fetchTraceabilityData(treeStatus).then((data) => {
+      if (isMounted) {
+        setTree(data)
+        setTimeout(() => setLoading(false), 400)
+      }
+    })
+    return () => { isMounted = false }
+  }, [treeStatus])
+
+  if (!tree && !loading) return null
+
 
   return (
     <div className="min-h-screen qr-hero-bg relative overflow-x-hidden">
@@ -498,16 +434,16 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
             )}
 
             {/* ── Timeline ── */}
-            {!isDiseased && (
+            {!isDiseased && tree?.timeline && (
               <motion.div variants={{ visible: { transition: { staggerChildren: 0.12 } } }}>
                 {tree.timeline.map((item, i) => (
-                  <TimelineEntry key={item.id} item={item} index={i} />
+                  <TimelineEntry key={item.id} item={item} index={i} totalItems={tree.timeline.length} />
                 ))}
               </motion.div>
             )}
 
             {/* ── Harvest card ── */}
-            {!isDiseased && (
+            {!isDiseased && tree?.harvestDate && (
               <motion.div variants={cardVariants} className="glass-card-warm p-4 sm:p-5 mt-2">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl badge-citrus flex items-center justify-center flex-shrink-0">
@@ -520,6 +456,16 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
                 </div>
               </motion.div>
             )}
+
+            {/* ── Print / Save Action Bar ── */}
+            <motion.div variants={itemVariants} className="mt-6 flex items-center justify-center gap-3 no-print">
+              <button
+                onClick={() => window.print()}
+                className="badge-citrus text-white font-mono text-[10px] uppercase tracking-wider px-5 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity min-h-[44px]"
+              >
+                <Printer size={14} /> Cetak / Simpan Kartu
+              </button>
+            </motion.div>
 
             {/* ── Footer ── */}
             <motion.div variants={itemVariants} className="mt-8 sm:mt-10 text-center">
@@ -538,11 +484,12 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
               {/* min-h-[44px] touch target */}
               <a
                 href="/admin"
-                className="inline-flex items-center justify-center gap-1.5 mt-4 font-mono text-[9px] uppercase tracking-wider text-[#9e7a50]/50 hover:text-[#ffa720] transition-colors duration-200 min-h-[44px] px-4"
+                className="inline-flex items-center justify-center gap-1.5 mt-4 font-mono text-[9px] uppercase tracking-wider text-[#9e7a50]/50 hover:text-[#ffa720] transition-colors duration-200 min-h-[44px] px-4 no-print"
               >
                 Admin Panel <ExternalLink size={9} />
               </a>
             </motion.div>
+
 
           </motion.div>
         )}
