@@ -313,3 +313,52 @@ body {
 .recharts-cartesian-grid line {
   stroke: rgba(255, 255, 255, 0.05) !important;
 }
+
+/* ── Print Optimization (@media print) ──────────────── */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  footer,
+  aside,
+  button,
+  .no-print-btn {
+    display: none !important;
+  }
+
+  .print-area {
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    border: 2px solid #333333 !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+  }
+
+  .glass-card,
+  .glass-card-warm,
+  .glass-card-danger {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+  }
+
+  .font-heading, .font-display, h1, h2, h3, h4 {
+    color: #000000 !important;
+  }
+
+  .text-\[\#fdf6f0\],
+  .text-\[\#dacdb8\],
+  .text-\[\#9e7a50\] {
+    color: #222222 !important;
+  }
+}
+
