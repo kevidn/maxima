@@ -234,7 +234,15 @@ export function formatDateIndonesian(dateStr) {
 }
 
 export async function addFertilizerSchedule(newItem) {
-  const newId = `F${String(fertilizerSchedules.length + 1).padStart(3, '0')}`
+  let maxNum = 0
+  fertilizerSchedules.forEach(item => {
+    const match = item.id.match(/\d+/)
+    if (match) {
+      const num = parseInt(match[0], 10)
+      if (num > maxNum) maxNum = num
+    }
+  })
+  const newId = `F${String(maxNum + 1).padStart(3, '0')}`
   const created = {
     id: newId,
     batch: newItem.batch || 'Batch-2023-A',
@@ -247,6 +255,7 @@ export async function addFertilizerSchedule(newItem) {
   fertilizerSchedules = [created, ...fertilizerSchedules]
   return Promise.resolve(created)
 }
+
 
 
 export async function toggleFertilizerStatus(id) {
