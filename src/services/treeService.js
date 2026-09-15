@@ -374,7 +374,7 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
         coordinates: d.coordinates || '7°37\'42"S 111°26\'18"E',
         planted: formatDateIndonesian(d.plantingDate) || '10 Jan 2026',
         farmer: d.farmerName || d.farmer?.name || 'Budi Santoso',
-        batch: d.batchId || (isBatchQuery ? identifier : 'Batch-2022-A'),
+        batch: d.batchId || (isBatchQuery ? identifier : 'BATCH-BBS001-20260315'),
         certifiedOrganic: d.certifiedOrganic ?? true,
         aiConfidence: Number(d.aiConfidence) || 97.8,
         lastScanned: d.lastScanned || 'Hari ini',
@@ -385,14 +385,15 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
         timeline: Array.isArray(d.timeline) && d.timeline.length > 0 ? d.timeline : MOCK_TRACEABILITY.healthy.timeline
       }
     } else if (res.data && res.data.warning) {
+      const d = res.data.data || {}
       return {
-        id: res.data.data?.treeCode || 'PHN-BBS-031',
+        id: d.treeCode || d.treeId || 'PHN-BBS-031',
         variety: 'Jeruk Bali Merah',
         location: 'Desa Bibis, Magetan',
         coordinates: '7°37\'42"S 111°26\'18"E',
         planted: '2026',
         farmer: 'Petani Terdaftar',
-        batch: res.data.data?.batchId || (isBatchQuery ? identifier : 'BATCH-SICK-2026'),
+        batch: d.batchId || (isBatchQuery ? identifier : 'BATCH-SICK-20260320'),
         certifiedOrganic: false,
         aiConfidence: 91.2,
         lastScanned: 'Hari ini',
@@ -409,7 +410,7 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
     return Promise.resolve({
       ...baseMock,
       id: isBatchQuery ? (isDiseasedQuery ? 'PHN-BBS-031' : 'PHN-BBS-001') : identifier,
-      batch: isBatchQuery ? identifier : (isDiseasedQuery ? 'BATCH-SICK-2026' : 'Batch-2022-A')
+      batch: isBatchQuery ? identifier : (isDiseasedQuery ? 'BATCH-SICK-20260320' : 'BATCH-BBS001-20260315')
     })
   }
 

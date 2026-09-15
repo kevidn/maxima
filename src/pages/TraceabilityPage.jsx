@@ -420,19 +420,19 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
                   href="/trace/BATCH-BBS001-20260315"
                   className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md flex-shrink-0 font-bold transition-colors"
                 >
-                  ✓ BATCH-BBS001 (Sehat)
+                  ✓ [Batch] BATCH-BBS001 (Sehat)
                 </a>
                 <a
                   href="/trace/BATCH-SICK-20260320"
                   className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-md flex-shrink-0 font-bold transition-colors"
                 >
-                  ⚠ BATCH-SICK (Karantina)
+                  ⚠ [Batch] BATCH-SICK (Karantina)
                 </a>
                 <a
                   href="/trace/PHN-BBS-001"
                   className="bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 px-2 py-0.5 rounded-md flex-shrink-0 font-semibold transition-colors"
                 >
-                  PHN-BBS-001
+                  🌳 [ID Pohon] PHN-BBS-001
                 </a>
               </div>
             </motion.div>
