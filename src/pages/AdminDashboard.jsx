@@ -55,6 +55,7 @@ import {
   removeAuthToken,
   loginFarmer
 } from '../services/treeService'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 // ── Navigation config ─────────────────────────────────────
 const NAV_ITEMS = [
@@ -2053,108 +2054,6 @@ function AIScanPage({ onScanComplete }) {
   )
 }
 
-// ── Markdown Message Renderer Helper ─────────────────────
-function MarkdownMessage({ content }) {
-  if (!content) return null
-  const lines = content.split('\n')
-
-  return (
-    <div className="space-y-2 text-sm leading-relaxed text-stone-800">
-      {lines.map((line, idx) => {
-        const trimmed = line.trim()
-        if (!trimmed) return <div key={idx} className="h-1" />
-
-        if (trimmed.startsWith('### ')) {
-          return (
-            <h4 key={idx} className="font-heading font-bold text-base text-forest-900 mt-3 mb-1 flex items-center gap-1.5">
-              {trimmed.replace('### ', '')}
-            </h4>
-          )
-        }
-        if (trimmed.startsWith('## ')) {
-          return (
-            <h3 key={idx} className="font-heading font-bold text-lg text-forest-900 mt-3.5 mb-1.5 flex items-center gap-1.5">
-              {trimmed.replace('## ', '')}
-            </h3>
-          )
-        }
-        if (trimmed.startsWith('---') || trimmed === '***') {
-          return <hr key={idx} className="my-3 border-stone-200" />
-        }
-
-        if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-          const rawText = trimmed.replace(/^[\*\-•]\s+/, '')
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-forest-600 mt-2 shrink-0" />
-              <span className="flex-1">{renderFormattedInline(rawText)}</span>
-            </div>
-          )
-        }
-
-        const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/)
-        if (numMatch) {
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-1.5">
-              <span className="font-mono text-xs font-bold text-forest-700 bg-forest-100 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
-                {numMatch[1]}
-              </span>
-              <span className="flex-1">{renderFormattedInline(numMatch[2])}</span>
-            </div>
-          )
-        }
-
-        return (
-          <p key={idx} className="leading-relaxed">
-            {renderFormattedInline(trimmed)}
-          </p>
-        )
-      })}
-    </div>
-  )
-}
-
-function renderFormattedInline(text) {
-  if (!text) return ''
-  const parts = []
-  const regex = /(\*\*.*?\*\*|\*.*?\*|`.*?`)/g
-  let lastIdx = 0
-  let match
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIdx) {
-      parts.push(text.substring(lastIdx, match.index))
-    }
-    const token = match[0]
-    if (token.startsWith('**') && token.endsWith('**')) {
-      parts.push(
-        <strong key={match.index} className="font-bold text-stone-950">
-          {token.slice(2, -2)}
-        </strong>
-      )
-    } else if (token.startsWith('*') && token.endsWith('*')) {
-      parts.push(
-        <em key={match.index} className="italic text-forest-900 font-medium">
-          {token.slice(1, -1)}
-        </em>
-      )
-    } else if (token.startsWith('`') && token.endsWith('`')) {
-      parts.push(
-        <code key={match.index} className="bg-stone-100 text-forest-800 font-mono text-xs px-1.5 py-0.5 rounded border border-stone-200">
-          {token.slice(1, -1)}
-        </code>
-      )
-    }
-    lastIdx = regex.lastIndex
-  }
-
-  if (lastIdx < text.length) {
-    parts.push(text.substring(lastIdx))
-  }
-
-  return parts
-}
-
 // ── 4B. AI Consultation Page / Chatbot Fullview ───────────
 function AIConsultationPage({ scannedLeafContext, onClearContext }) {
   const [trees, setTrees] = useState([])
@@ -2467,7 +2366,7 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
                     {m.text}
                   </p>
                 ) : (
-                  <MarkdownMessage content={m.text} />
+                  <MarkdownRenderer content={m.text} />
                 )}
 
                 <div className="flex items-center justify-between gap-3 mt-2 pt-1 border-t border-stone-100/40">

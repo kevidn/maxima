@@ -10,6 +10,7 @@ import {
   Leaf, AlertTriangle, ShieldCheck, ChevronDown, RotateCcw
 } from 'lucide-react'
 import { sendChatMessage } from '../services/treeService'
+import MarkdownRenderer from './MarkdownRenderer'
 
 const INITIAL_MESSAGES = [
   {
@@ -151,7 +152,11 @@ export default function ChatbotWidget() {
                         : 'bg-white text-stone-800 border border-stone-200 rounded-tl-none shadow-xs'
                     }`}
                   >
-                    <p className="whitespace-pre-line">{m.text}</p>
+                    {m.sender === 'user' ? (
+                      <p className="whitespace-pre-line">{m.text}</p>
+                    ) : (
+                      <MarkdownRenderer content={m.text} />
+                    )}
                     <span
                       className={`block font-mono text-[9px] mt-1 text-right ${
                         m.sender === 'user' ? 'text-forest-200' : 'text-stone-400'
