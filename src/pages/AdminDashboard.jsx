@@ -1819,28 +1819,53 @@ function AIScanPage() {
 
       {/* Result Notification Banner */}
       {latestResult && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-3xl bg-white border border-stone-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        >
-          <div>
-            <div className="font-mono text-xs uppercase text-forest-700 font-bold tracking-wider mb-0.5">
-              Hasil Diagnosis Selesai ({latestResult.id})
-            </div>
-            <div className="font-heading text-2xl font-bold text-stone-900">
-              {latestResult.disease}
-            </div>
-            <div className="font-mono text-xs text-stone-600 mt-1 font-medium">
-              Confidence: <span className="font-bold text-stone-800">{latestResult.confidence}%</span> · Severity: <span className="font-bold uppercase">{latestResult.severity}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => setSelectedAlertDetail(latestResult)}
-            className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xs cursor-pointer min-h-[44px]"
+        latestResult.error ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="p-5 rounded-3xl bg-red-50 border border-red-200 shadow-md flex items-start gap-4 text-red-900"
           >
-            <Eye size={16} /> Baca SOP Penanganan
-          </button>
-        </motion.div>
+            <div className="w-10 h-10 rounded-2xl bg-red-100 border border-red-200 flex items-center justify-center flex-shrink-0 text-red-700">
+              <ShieldAlert size={20} />
+            </div>
+            <div>
+              <div className="font-mono text-xs uppercase text-red-700 font-bold tracking-wider mb-0.5">
+                Peringatan Verifikasi AI Gatekeeper
+              </div>
+              <div className="font-heading text-lg font-bold text-red-900">
+                {latestResult.message || 'Gambar tidak valid atau objek bukan daun Jeruk Bali.'}
+              </div>
+              <p className="text-xs text-red-700 mt-1">
+                Sistem Gatekeeper memastikan hanya citra daun/tanaman jeruk bali yang dapat diproses untuk menjaga akurasi diagnosis botani.
+              </p>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="p-5 rounded-3xl bg-white border border-stone-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          >
+            <div>
+              <div className="font-mono text-xs uppercase text-forest-700 font-bold tracking-wider mb-0.5">
+                Hasil Diagnosis Selesai ({latestResult.id})
+              </div>
+              <div className="font-heading text-2xl font-bold text-stone-900">
+                {latestResult.disease}
+              </div>
+              <div className="font-mono text-xs text-stone-600 mt-1 font-medium">
+                Confidence: <span className="font-bold text-stone-800">{latestResult.confidence}%</span> · Severity: <span className="font-bold uppercase">{latestResult.severity}</span>
+                {latestResult.satpam?.skor_keyakinan_daun_persen && (
+                  <span> · Satpam AI: <span className="font-bold text-emerald-700">{latestResult.satpam.skor_keyakinan_daun_persen}% Lolos</span></span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedAlertDetail(latestResult)}
+              className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xs cursor-pointer min-h-[44px]"
+            >
+              <Eye size={16} /> Baca SOP Penanganan
+            </button>
+          </motion.div>
+        )
       )}
 
       {/* Upload zone */}
