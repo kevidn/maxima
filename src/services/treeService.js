@@ -991,25 +991,27 @@ export async function verifyHarvestAndGenerateQR(harvestId, { stickerCount = 6 }
   return { success: false, message: res.data?.message || 'Gagal memverifikasi panen.' }
 }
 
-// ── 9. Chatbot AI API ──────────────────────────────────────
+// ── 9. Chatbot AI API (Maxist Assistant) ───────────────────
 export async function sendChatMessage(message, treeId = null, imageUrl = null, history = []) {
   const payload = {
     message,
     treeId: treeId || undefined,
     image_url: imageUrl || undefined,
-    history: history.length > 0 ? history : undefined
+    history: Array.isArray(history) && history.length > 0 ? history : undefined
   }
 
-  const res = await apiRequest('/api/v1/chat', {
+  const res = await apiRequest('/api/ai/chat', {
     method: 'POST',
     body: JSON.stringify(payload)
   })
 
-  if (res.ok && (res.data?.reply || res.data?.data?.reply || res.data?.message)) {
-    return res.data.reply || res.data.data?.reply || res.data.message
+  if (res.ok && res.data) {
+    if (res.data.data?.reply) return res.data.data.reply
+    if (res.data.reply) return res.data.reply
+    if (typeof res.data.data === 'string') return res.data.data
   }
 
-  // Graceful fallback to rich local knowledge base if remote AI service is down
+  // Graceful fallback to rich agricultural knowledge base if remote AI service is temporarily offline
   const lower = message.toLowerCase()
   if (lower.includes('hlb') || lower.includes('penyakit') || lower.includes('gejala') || lower.includes('sakit') || lower.includes('ganggang')) {
     return 'Untuk penanganan penyakit pada tanaman jeruk bali:\n1. Segera lakukan isolasi/karantina pohon agar hama vektor (*Diaphorina citri*) tidak menulari baris lain.\n2. Lakukan sanitasi ranting & daun terinfeksi lalu musnahkan.\n3. Semprotkan biopestisida nabati atau fungisida berbasis tembaga.\n4. Sistem secara otomatis memblokir QR code pohon di halaman transparansi publik jika terdeteksi sakit.'
@@ -1019,7 +1021,7 @@ export async function sendChatMessage(message, treeId = null, imageUrl = null, h
     return 'Standar Panen Jeruk Bali Merah Magetan:\n• Umur buah 7–8 bulan setelah bunga mekar.\n• Bobot optimal: 1.2 – 1.8 kg/buah.\n• Pori-pori kulit melebar, aroma harum, dan brix > 11%.'
   }
 
-  return 'Terima kasih atas pertanyaannya! Data kebun Anda telah disinkronkan dengan API Maxima. Anda dapat memantau deteksi langsung di menu **Deteksi AI** atau mengelola jadwal pupuk di menu **Jadwal Pupuk**.'
+  return 'Halo! Saya Maxist, Asisten AI Maxima. Server AI sedang memproses permintaan atau sedang dalam antrean. Anda juga dapat memantau status pohon dan jadwal kebun langsung dari dashboard.'
 }
 
 // ── 10. Settings & Notifications API ───────────────────────

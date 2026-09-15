@@ -59,8 +59,16 @@ export default function ChatbotWidget() {
     if (!textToSend) setInputValue('')
     setIsTyping(true)
 
+    // Build history for backend AI context
+    const historyPayload = messages
+      .filter(m => m.sender === 'user' || m.sender === 'bot')
+      .map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }))
+
     try {
-      const replyText = await sendChatMessage(text)
+      const replyText = await sendChatMessage(text, null, null, historyPayload)
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
@@ -73,7 +81,7 @@ export default function ChatbotWidget() {
         id: Date.now() + 1,
         sender: 'bot',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: 'Mohon maaf, terjadi gangguan koneksi ke server AI. Silakan coba sesaat lagi.'
+        text: 'Mohon maaf, terjadi kendala saat menghubungi asisten AI. Silakan coba sesaat lagi.'
       }
       setMessages(prev => [...prev, errorMsg])
     } finally {
