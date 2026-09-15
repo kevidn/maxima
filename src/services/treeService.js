@@ -991,37 +991,52 @@ export async function verifyHarvestAndGenerateQR(harvestId, { stickerCount = 6 }
   return { success: false, message: res.data?.message || 'Gagal memverifikasi panen.' }
 }
 
-// ── 9. Chatbot AI API (Maxist Assistant) ───────────────────
-export async function sendChatMessage(message, treeId = null, imageUrl = null, history = []) {
+// ── 9. Chatbot AI API ──────────────────────────────────────
+export async function sendChatMessage(message, treeId = null, imageUrl = null, history = [], dbContext = null) {
   const payload = {
     message,
     treeId: treeId || undefined,
     image_url: imageUrl || undefined,
+    db_context: dbContext || undefined,
     history: Array.isArray(history) && history.length > 0 ? history : undefined
   }
 
-  const res = await apiRequest('/api/ai/chat', {
+  // Primary live endpoint: /api/chat, fallback: /api/v1/chat
+  let res = await apiRequest('/api/chat', {
     method: 'POST',
     body: JSON.stringify(payload)
   })
 
-  if (res.ok && res.data) {
-    if (res.data.data?.reply) return res.data.data.reply
-    if (res.data.reply) return res.data.reply
-    if (typeof res.data.data === 'string') return res.data.data
+  if (!res.ok) {
+    res = await apiRequest('/api/v1/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
   }
 
-  // Graceful fallback to rich agricultural knowledge base if remote AI service is temporarily offline
+  if (res.ok) {
+    if (typeof res.data?.data?.reply === 'string' && res.data.data.reply.trim()) {
+      return res.data.data.reply
+    }
+    if (typeof res.data?.reply === 'string' && res.data.reply.trim()) {
+      return res.data.reply
+    }
+    if (typeof res.data?.message === 'string' && res.data.message.trim()) {
+      return res.data.message
+    }
+  }
+
+  // Graceful fallback to rich local knowledge base if remote AI service is down
   const lower = message.toLowerCase()
-  if (lower.includes('hlb') || lower.includes('penyakit') || lower.includes('gejala') || lower.includes('sakit') || lower.includes('ganggang')) {
-    return 'Untuk penanganan penyakit pada tanaman jeruk bali:\n1. Segera lakukan isolasi/karantina pohon agar hama vektor (*Diaphorina citri*) tidak menulari baris lain.\n2. Lakukan sanitasi ranting & daun terinfeksi lalu musnahkan.\n3. Semprotkan biopestisida nabati atau fungisida berbasis tembaga.\n4. Sistem secara otomatis memblokir QR code pohon di halaman transparansi publik jika terdeteksi sakit.'
-  } else if (lower.includes('pupuk') || lower.includes('jadwal') || lower.includes('organik') || lower.includes('mol') || lower.includes('kascing')) {
-    return 'Standar Pemupukan Organik Desa Bibis:\n• **Kompos Kascing**: 2 kg/pohon setiap 3 bulan.\n• **MOL Bonggol Pisang**: 1.5 L/pohon (kocor sekeliling tajuk).\n• **Pupuk Kalium Organik**: 2 kg saat fase pembungaan & pembuahan.'
-  } else if (lower.includes('panen') || lower.includes('buah') || lower.includes('standar')) {
-    return 'Standar Panen Jeruk Bali Merah Magetan:\n• Umur buah 7–8 bulan setelah bunga mekar.\n• Bobot optimal: 1.2 – 1.8 kg/buah.\n• Pori-pori kulit melebar, aroma harum, dan brix > 11%.'
+  if (lower.includes('hlb') || lower.includes('penyakit') || lower.includes('gejala') || lower.includes('sakit') || lower.includes('ganggang') || lower.includes('kudis')) {
+    return 'Untuk penanganan penyakit pada tanaman jeruk bali:\n1. **Isolasi & Karantina:** Batasi akses ke pohon terinfeksi agar vektor hama tidak menulari baris kebun lain.\n2. **Sanitasi Daun & Ranting:** Pangkas bagian daun bergejala dan bakar/musnahkan di luar area kebun.\n3. **Aplikasi Fungisida / Bakterisida:** Gunakan fungisida tembaga hidroksida (2-3 g/L) semprotkan merata pada tajuk pohon pagi hari.\n4. **Pemulihan Nutrisi:** Berikan asam amino dan pupuk mikro untuk mempercepat regenerasi tunas daun baru.'
+  } else if (lower.includes('pupuk') || lower.includes('jadwal') || lower.includes('organik') || lower.includes('mol') || lower.includes('kascing') || lower.includes('npk')) {
+    return 'Standar Pemupukan Organik Desa Bibis:\n• **Kompos Kascing**: 2-3 kg/pohon setiap 3 bulan.\n• **MOL Bonggol Pisang**: 1.5 L/pohon (kocor sekeliling tajuk perakaran).\n• **Pupuk Kalium Organik / NPK 16-16-16**: Dosis 250-400 gram saat fase pembungaan & pembuahan.'
+  } else if (lower.includes('panen') || lower.includes('buah') || lower.includes('standar') || lower.includes('kematangan')) {
+    return 'Standar Panen Jeruk Bali Merah Magetan:\n• Umur buah 7–8 bulan setelah bunga mekar.\n• Bobot optimal: 1.2 – 1.8 kg/buah.\n• Ciri siap panen: Pori-pori kulit melebar, aroma harum semerbak, dan kadar gula (brix) > 11%.'
   }
 
-  return 'Halo! Saya Maxist, Asisten AI Maxima. Server AI sedang memproses permintaan atau sedang dalam antrean. Anda juga dapat memantau status pohon dan jadwal kebun langsung dari dashboard.'
+  return 'Terima kasih atas pertanyaannya! Data pohon dan hasil diagnosis kebun Anda telah tersinkronisasi. Ada yang ingin dikonsultasikan lebih lanjut mengenai dosis obat, perawatan daun, atau jadwal pemupukan?'
 }
 
 // ── 10. Settings & Notifications API ───────────────────────

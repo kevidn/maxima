@@ -6,7 +6,7 @@
 // ════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import {
@@ -18,7 +18,8 @@ import {
   Copy, Printer, Download, ExternalLink, Plus, Trash2,
   Save, CheckCircle2, Calendar, MapPin, User, Building,
   ShieldCheck, Layers, Users, Edit3, Phone, Mail, FileText,
-  FileCheck, Sparkles, RefreshCw
+  FileCheck, Sparkles, RefreshCw, MessageSquare, Send,
+  RotateCcw, Bot, MessageCircle, HelpCircle
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -48,6 +49,7 @@ import {
   deleteAdminFarmer,
   fetchFarmNotifications,
   markAllNotificationsRead,
+  sendChatMessage,
   getAuthToken,
   setAuthToken,
   removeAuthToken,
@@ -60,6 +62,7 @@ const NAV_ITEMS = [
   { path: '/admin/trees',     icon: TreePine,        label: 'Pohon & Lahan'   },
   { path: '/admin/fertilize', icon: FlaskConical,    label: 'Jadwal Pupuk'    },
   { path: '/admin/ai-scan',   icon: ScanLine,        label: 'Deteksi AI'      },
+  { path: '/admin/chat',      icon: MessageSquare,   label: 'Konsultasi AI'   },
   { path: '/admin/harvests',  icon: PackageCheck,    label: 'Lapor & QR Panen'},
   { path: '/admin/farmers',   icon: Users,           label: 'Petani Terdaftar'},
   { path: '/admin/settings',  icon: Settings,        label: 'Pengaturan'      },
@@ -1742,7 +1745,7 @@ function AddFertilizerModal({ onClose, onSuccess }) {
 }
 
 // ── 4. AI Leaf Disease Detection & Logs (FR-5) ────────────
-function AIScanPage() {
+function AIScanPage({ onScanComplete }) {
   const [alerts, setAlerts] = useState([])
   const [trees, setTrees] = useState([])
   const [selectedTreeId, setSelectedTreeId] = useState('')
@@ -1752,6 +1755,7 @@ function AIScanPage() {
   const [latestResult, setLatestResult] = useState(null)
   const [selectedAlertDetail, setSelectedAlertDetail] = useState(null)
   const fileInputRef = useRef(null)
+  const navigate = useNavigate()
 
   const loadAlerts = useCallback(() => {
     fetchAIAlerts({ query: searchQuery, severity: severityFilter }).then(setAlerts)
@@ -1775,6 +1779,36 @@ function AIScanPage() {
     setLatestResult(result)
     loadAlerts()
     if (fileInputRef.current) fileInputRef.current.value = ''
+
+    // If diagnosis succeeds, notify context & auto-navigate to Chatbot Consultation page
+    if (result && !result.error) {
+      const selectedTree = trees.find(t => (t.dbId || t.id) === selectedTreeId) || trees[0]
+      const scanContext = {
+        treeId: selectedTreeId,
+        treeCode: selectedTree?.treeCode || result.treeCode || 'PHN-BBS-001',
+        variety: selectedTree?.variety || result.variety || 'Jeruk Bali Merah',
+        location: selectedTree?.location || selectedTree?.locationBlock || result.batch || 'Blok A-01',
+        farmerName: selectedTree?.farmerName || 'Budi Santoso',
+        disease: result.disease,
+        confidence: result.confidence,
+        severity: result.severity,
+        isSick: result.isSick,
+        symptoms: result.symptoms,
+        advisory: result.advisory,
+        photoUrl: result.photoUrl,
+        satpam: result.satpam,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+
+      if (typeof onScanComplete === 'function') {
+        onScanComplete(scanContext)
+      }
+
+      // Smooth auto transition to Chatbot Consultation Page after 1.2s
+      setTimeout(() => {
+        navigate('/admin/chat')
+      }, 1200)
+    }
   }
 
   const handleFileChange = (e) => {
@@ -1792,7 +1826,7 @@ function AIScanPage() {
         </span>
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mt-2">Deteksi Penyakit AI</h1>
         <p className="font-body text-base text-stone-600 mt-1 font-medium">
-          Verifikasi foto daun jeruk bali, diagnosis patogen, dan otomatisasi update karantina pohon
+          Verifikasi foto daun jeruk bali, diagnosis patogen, dan otomatisasi konsultasi ke Asisten AI Maxist
         </p>
       </div>
 
@@ -1842,11 +1876,17 @@ function AIScanPage() {
         ) : (
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="p-5 rounded-3xl bg-white border border-stone-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            className="p-5 rounded-3xl bg-white border border-emerald-300 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden"
           >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/50 rounded-full blur-2xl pointer-events-none" />
             <div>
-              <div className="font-mono text-xs uppercase text-forest-700 font-bold tracking-wider mb-0.5">
-                Hasil Diagnosis Selesai ({latestResult.id})
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-mono text-xs uppercase text-forest-700 font-bold tracking-wider">
+                  Hasil Diagnosis Selesai ({latestResult.id})
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 animate-pulse">
+                  Mengalihkan ke Konsultasi AI...
+                </span>
               </div>
               <div className="font-heading text-2xl font-bold text-stone-900">
                 {latestResult.disease}
@@ -1858,12 +1898,20 @@ function AIScanPage() {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setSelectedAlertDetail(latestResult)}
-              className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xs cursor-pointer min-h-[44px]"
-            >
-              <Eye size={16} /> Baca SOP Penanganan
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedAlertDetail(latestResult)}
+                className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+              >
+                <Eye size={16} /> SOP Detail
+              </button>
+              <button
+                onClick={() => navigate('/admin/chat')}
+                className="btn-action-green text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-md cursor-pointer min-h-[44px]"
+              >
+                <MessageSquare size={16} /> Konsultasi Sekarang
+              </button>
+            </div>
           </motion.div>
         )
       )}
@@ -2001,6 +2049,564 @@ function AIScanPage() {
       </div>
 
       {selectedAlertDetail && <AIAlertDetailModal alert={selectedAlertDetail} onClose={() => setSelectedAlertDetail(null)} />}
+    </motion.div>
+  )
+}
+
+// ── Markdown Message Renderer Helper ─────────────────────
+function MarkdownMessage({ content }) {
+  if (!content) return null
+  const lines = content.split('\n')
+
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-stone-800">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim()
+        if (!trimmed) return <div key={idx} className="h-1" />
+
+        if (trimmed.startsWith('### ')) {
+          return (
+            <h4 key={idx} className="font-heading font-bold text-base text-forest-900 mt-3 mb-1 flex items-center gap-1.5">
+              {trimmed.replace('### ', '')}
+            </h4>
+          )
+        }
+        if (trimmed.startsWith('## ')) {
+          return (
+            <h3 key={idx} className="font-heading font-bold text-lg text-forest-900 mt-3.5 mb-1.5 flex items-center gap-1.5">
+              {trimmed.replace('## ', '')}
+            </h3>
+          )
+        }
+        if (trimmed.startsWith('---') || trimmed === '***') {
+          return <hr key={idx} className="my-3 border-stone-200" />
+        }
+
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+          const rawText = trimmed.replace(/^[\*\-•]\s+/, '')
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-forest-600 mt-2 shrink-0" />
+              <span className="flex-1">{renderFormattedInline(rawText)}</span>
+            </div>
+          )
+        }
+
+        const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/)
+        if (numMatch) {
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5">
+              <span className="font-mono text-xs font-bold text-forest-700 bg-forest-100 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
+                {numMatch[1]}
+              </span>
+              <span className="flex-1">{renderFormattedInline(numMatch[2])}</span>
+            </div>
+          )
+        }
+
+        return (
+          <p key={idx} className="leading-relaxed">
+            {renderFormattedInline(trimmed)}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
+function renderFormattedInline(text) {
+  if (!text) return ''
+  const parts = []
+  const regex = /(\*\*.*?\*\*|\*.*?\*|`.*?`)/g
+  let lastIdx = 0
+  let match
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(text.substring(lastIdx, match.index))
+    }
+    const token = match[0]
+    if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(
+        <strong key={match.index} className="font-bold text-stone-950">
+          {token.slice(2, -2)}
+        </strong>
+      )
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      parts.push(
+        <em key={match.index} className="italic text-forest-900 font-medium">
+          {token.slice(1, -1)}
+        </em>
+      )
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code key={match.index} className="bg-stone-100 text-forest-800 font-mono text-xs px-1.5 py-0.5 rounded border border-stone-200">
+          {token.slice(1, -1)}
+        </code>
+      )
+    }
+    lastIdx = regex.lastIndex
+  }
+
+  if (lastIdx < text.length) {
+    parts.push(text.substring(lastIdx))
+  }
+
+  return parts
+}
+
+// ── 4B. AI Consultation Page / Chatbot Fullview ───────────
+function AIConsultationPage({ scannedLeafContext, onClearContext }) {
+  const [trees, setTrees] = useState([])
+  const [selectedTreeId, setSelectedTreeId] = useState('')
+  const [messages, setMessages] = useState([])
+  const [inputValue, setInputValue] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [copiedId, setCopiedId] = useState(null)
+  const messagesEndRef = useRef(null)
+  const initializedContextRef = useRef(null)
+
+  // Load tree database
+  useEffect(() => {
+    fetchTreeBatches().then(res => {
+      setTrees(res)
+      if (res.length > 0 && !selectedTreeId) {
+        if (scannedLeafContext?.treeId) {
+          setSelectedTreeId(scannedLeafContext.treeId)
+        } else {
+          setSelectedTreeId(res[0].dbId || res[0].id)
+        }
+      }
+    })
+  }, [scannedLeafContext])
+
+  // Generate initial greeting message based on scan context or general mode
+  useEffect(() => {
+    if (scannedLeafContext && initializedContextRef.current !== scannedLeafContext.timestamp) {
+      initializedContextRef.current = scannedLeafContext.timestamp
+      if (scannedLeafContext.treeId) {
+        setSelectedTreeId(scannedLeafContext.treeId)
+      }
+
+      const initialBotMessage = {
+        id: 'init-scan-' + Date.now(),
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        text: `Halo Petani! Hasil diagnosis AI untuk daun pohon **${scannedLeafContext.treeCode}** (${scannedLeafContext.variety} - ${scannedLeafContext.location}) terdeteksi indikasi: **${scannedLeafContext.disease}** dengan tingkat keyakinan **${scannedLeafContext.confidence}%**.\n\n📌 **Ringkasan SOP & Penanganan Awal:**\n${scannedLeafContext.advisory || scannedLeafContext.symptoms}\n\nSilakan tanyakan apa saja seputar dosis fungisida/bakterisida, jadwal isolasi pohon, cara pemangkasan, atau tindakan lanjutan yang perlu dilakukan! 🍊`
+      }
+      setMessages([initialBotMessage])
+    } else if (!scannedLeafContext && messages.length === 0) {
+      setMessages([
+        {
+          id: 'init-default',
+          sender: 'bot',
+          time: 'Baru saja',
+          text: `Halo! Saya **Maxist**, Asisten AI Pomelo Trace 🍊.\n\nSaya siap membantu Anda dalam:\n• Konsultasi penyakit daun & hama jeruk bali (HLB, Bercak Ganggang, Kudis)\n• Rekomendasi dosis pupuk organik, MOL, dan NPK\n• Standar operasional budidaya & penanganan pohon sakit\n\nPilih pohon target di atas atau langsung tanyakan masalah kebun Anda!`
+        }
+      ])
+    }
+  }, [scannedLeafContext])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isTyping])
+
+  const handleSend = async (textToSend = null) => {
+    const text = textToSend || inputValue.trim()
+    if (!text || isTyping) return
+
+    const userMsg = {
+      id: Date.now(),
+      sender: 'user',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text
+    }
+
+    setMessages(prev => [...prev, userMsg])
+    if (!textToSend) setInputValue('')
+    setIsTyping(true)
+
+    // Build context payload
+    const activeTree = trees.find(t => (t.dbId || t.id) === selectedTreeId) || null
+    const historyPayload = messages.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'model',
+      content: m.text
+    }))
+
+    const dbContext = {
+      scannedLeaf: scannedLeafContext ? {
+        treeCode: scannedLeafContext.treeCode,
+        disease: scannedLeafContext.disease,
+        confidence: scannedLeafContext.confidence,
+        severity: scannedLeafContext.severity,
+        symptoms: scannedLeafContext.symptoms,
+        advisory: scannedLeafContext.advisory
+      } : null,
+      selectedTree: activeTree ? {
+        treeCode: activeTree.treeCode || activeTree.id,
+        variety: activeTree.variety,
+        location: activeTree.location || activeTree.locationBlock,
+        farmerName: activeTree.farmerName,
+        healthStatus: activeTree.healthStatus
+      } : null
+    }
+
+    try {
+      const reply = await sendChatMessage(
+        text,
+        selectedTreeId || undefined,
+        scannedLeafContext?.photoUrl || undefined,
+        historyPayload,
+        dbContext
+      )
+
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        text: reply
+      }
+      setMessages(prev => [...prev, botMsg])
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          text: 'Mohon maaf, terjadi gangguan koneksi ke server AI Maxist. Silakan ulangi pertanyaan Anda.'
+        }
+      ])
+    } finally {
+      setIsTyping(false)
+    }
+  }
+
+  const handleCopy = (id, text) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const handleResetChat = () => {
+    if (scannedLeafContext) {
+      setMessages([
+        {
+          id: 'reset-' + Date.now(),
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          text: `Percakapan direset. Konteks aktif: **${scannedLeafContext.treeCode}** (${scannedLeafContext.disease}). Ada yang ingin Anda tanyakan lagi seputar daun pohon ini?`
+        }
+      ])
+    } else {
+      setMessages([
+        {
+          id: 'reset-' + Date.now(),
+          sender: 'bot',
+          time: 'Baru saja',
+          text: 'Halo! Saya Maxist, Asisten AI Pomelo Trace. Silakan tanyakan hal seputar kesehatan pohon atau perawatan kebun jeruk bali.'
+        }
+      ])
+    }
+  }
+
+  // Dynamic quick prompt chips
+  const quickPrompts = scannedLeafContext ? [
+    `Apa rekomendasi obat & fungisida untuk ${scannedLeafContext.disease}?`,
+    `Berapa takaran dosis per tangki semprot?`,
+    `Apakah pohon ${scannedLeafContext.treeCode} perlu dikarantina?`,
+    `Berapa estimasi waktu pemulihan daun ini?`,
+    `Bagaimana cara pemangkasan ranting yang tepat?`
+  ] : [
+    'Bagaimana cara cegah penyakit HLB pada daun jeruk?',
+    'Berapa takaran kompos kascing & MOL bonggol pisang?',
+    'Kapan waktu pemupukan NPK terbaik untuk fase buah?',
+    'Standar mutu panen Jeruk Bali Merah Magetan'
+  ]
+
+  const activeTree = trees.find(t => (t.dbId || t.id) === selectedTreeId)
+
+  return (
+    <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-xs uppercase tracking-wider px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 shadow-xs">
+              <Sparkles size={13} className="text-emerald-700" /> Maxist AI Intelligence Active
+            </span>
+            <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          </div>
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mt-2">
+            Konsultasi & Asisten AI Pomelo
+          </h1>
+          <p className="font-body text-base text-stone-600 mt-1 font-medium">
+            Tanya jawab interaktif seputar hasil deteksi daun, rekomendasi obat & fungisida, takaran pupuk, dan SOP perkebunan.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Link
+            to="/admin/ai-scan"
+            className="btn-action-green text-white font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-xs cursor-pointer min-h-[42px]"
+          >
+            <ScanLine size={16} /> Deteksi Daun Baru
+          </Link>
+          <button
+            onClick={handleResetChat}
+            className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 transition-colors cursor-pointer shadow-xs min-h-[42px] min-w-[42px] flex items-center justify-center"
+            title="Reset Percakapan"
+          >
+            <RotateCcw size={17} />
+          </button>
+        </div>
+      </div>
+
+      {/* Active Leaf Context Card if coming from Scan */}
+      {scannedLeafContext && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border-2 border-emerald-400/80 rounded-3xl p-5 sm:p-6 shadow-md relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-100/50 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              {scannedLeafContext.photoUrl ? (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-stone-200 shrink-0 shadow-sm">
+                  <img src={scannedLeafContext.photoUrl} alt="Foto Daun" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                  scannedLeafContext.severity === 'high' ? 'bg-red-100 text-red-700 border border-red-200' :
+                  scannedLeafContext.severity === 'medium' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                  'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                }`}>
+                  <Leaf size={28} />
+                </div>
+              )}
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-mono text-xs uppercase tracking-wider font-bold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-md border border-forest-200">
+                    Konteks Daun Discan ({scannedLeafContext.treeCode})
+                  </span>
+                  <SeverityBadge level={scannedLeafContext.severity} />
+                  <span className="font-mono text-xs font-bold text-stone-500">
+                    Akurasi: {scannedLeafContext.confidence}%
+                  </span>
+                </div>
+
+                <h3 className="font-heading text-xl sm:text-2xl font-bold text-stone-900">
+                  {scannedLeafContext.disease}
+                </h3>
+                
+                <p className="font-body text-xs sm:text-sm text-stone-600 mt-1 max-w-2xl line-clamp-2">
+                  {scannedLeafContext.advisory || scannedLeafContext.symptoms}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onClearContext}
+                className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-mono text-xs font-bold transition-colors cursor-pointer"
+                title="Ganti ke mode konsultasi umum"
+              >
+                Lepas Konteks Daun
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Target Tree Context Switcher */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-forest-800 text-white flex items-center justify-center shrink-0">
+            <TreePine size={20} />
+          </div>
+          <div>
+            <span className="font-mono text-xs uppercase text-forest-700 font-bold block">Pohon Target Konsultasi</span>
+            <p className="font-body text-sm font-semibold text-stone-800">
+              {activeTree ? `${activeTree.treeCode || activeTree.id} · ${activeTree.variety} (${activeTree.location || activeTree.locationBlock})` : 'Pilih pohon untuk menghubungkan riwayat pupuk & log kebun'}
+            </p>
+          </div>
+        </div>
+
+        <select
+          value={selectedTreeId}
+          onChange={(e) => setSelectedTreeId(e.target.value)}
+          className="bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 font-bold text-sm text-stone-900 focus:outline-none focus:border-forest-700 min-w-[220px]"
+        >
+          {trees.map(t => (
+            <option key={t.dbId || t.id} value={t.dbId || t.id}>
+              {t.treeCode || t.id} — {t.location || t.locationBlock} ({t.variety})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Main Chat Interface */}
+      <div className="bg-white border border-stone-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[600px] max-h-[75vh]">
+        {/* Chat Header Bar */}
+        <div className="bg-stone-50 border-b border-stone-200 px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-forest-800 text-white flex items-center justify-center shadow-xs">
+              <Bot size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-bold text-base text-stone-900">Maxist Assistant</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <span className="font-mono text-[11px] text-stone-500">Live AI Backend https://api.maximaa.tech</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-block font-mono text-xs text-stone-500">
+              {messages.length} pesan dalam sesi
+            </span>
+          </div>
+        </div>
+
+        {/* Message Stream */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#fcfbfa]">
+          {messages.map((m) => (
+            <motion.div
+              key={m.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex gap-3.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {m.sender === 'bot' && (
+                <div className="w-9 h-9 rounded-2xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <Bot size={18} />
+                </div>
+              )}
+
+              <div
+                className={`max-w-[88%] sm:max-w-[78%] rounded-3xl p-4 sm:p-5 relative group ${
+                  m.sender === 'user'
+                    ? 'bg-forest-800 text-white rounded-tr-xs shadow-md'
+                    : 'bg-white border border-stone-200/90 text-stone-900 rounded-tl-xs shadow-sm'
+                }`}
+              >
+                {m.sender === 'user' ? (
+                  <p className="font-body text-sm sm:text-base leading-relaxed whitespace-pre-line text-white">
+                    {m.text}
+                  </p>
+                ) : (
+                  <MarkdownMessage content={m.text} />
+                )}
+
+                <div className="flex items-center justify-between gap-4 mt-2.5 pt-1.5 border-t border-stone-100/30">
+                  <span className={`font-mono text-[10px] ${m.sender === 'user' ? 'text-emerald-200' : 'text-stone-400'}`}>
+                    {m.time}
+                  </span>
+
+                  {m.sender === 'bot' && (
+                    <button
+                      onClick={() => handleCopy(m.id, m.text)}
+                      className="opacity-60 group-hover:opacity-100 text-stone-500 hover:text-forest-800 transition-opacity flex items-center gap-1 font-mono text-[10px] cursor-pointer"
+                      title="Salin jawaban AI"
+                    >
+                      {copiedId === m.id ? (
+                        <>
+                          <Check size={12} className="text-emerald-600" />
+                          <span className="text-emerald-700 font-bold">Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Salin</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {m.sender === 'user' && (
+                <div className="w-9 h-9 rounded-2xl bg-stone-200 text-stone-800 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <User size={18} />
+                </div>
+              )}
+            </motion.div>
+          ))}
+
+          {isTyping && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3 items-center"
+            >
+              <div className="w-9 h-9 rounded-2xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Bot size={18} />
+              </div>
+              <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-xs px-4 py-3 flex items-center gap-2 shadow-xs">
+                <span className="font-body text-xs font-semibold text-stone-600">Maxist sedang menganalisis...</span>
+                <span className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce" />
+                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce [animation-delay:0.4s]" />
+                </span>
+              </div>
+            </motion.div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="px-4 py-2.5 bg-stone-50 border-t border-stone-200 flex gap-2 overflow-x-auto no-scrollbar">
+          {quickPrompts.map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => handleSend(prompt)}
+              className="px-3 py-1.5 rounded-xl bg-white hover:bg-forest-50 hover:text-forest-800 hover:border-forest-300 text-stone-700 border border-stone-200 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 shadow-2xs"
+            >
+              💬 {prompt}
+            </button>
+          ))}
+        </div>
+
+        {/* Chat Input Bar */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSend()
+          }}
+          className="p-3 sm:p-4 bg-white border-t border-stone-200 flex items-center gap-2.5"
+        >
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={
+              scannedLeafContext
+                ? `Tanyakan detail cara obat/penanganan untuk daun ${scannedLeafContext.disease}...`
+                : 'Tanyakan rekomendasi dosis obat, pemupukan, atau panduan panen...'
+            }
+            className="flex-1 bg-stone-50 border border-stone-300 rounded-2xl px-4 sm:px-5 py-3 text-sm sm:text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
+          />
+
+          <button
+            type="submit"
+            disabled={!inputValue.trim() || isTyping}
+            className="btn-action-green text-white font-bold px-5 sm:px-6 py-3 rounded-2xl flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:hover:opacity-40 shrink-0 min-h-[48px]"
+          >
+            <Send size={18} />
+            <span className="hidden sm:inline">Kirim</span>
+          </button>
+        </form>
+      </div>
     </motion.div>
   )
 }
@@ -2793,6 +3399,7 @@ export default function AdminDashboard() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [farmSettings, setFarmSettings] = useState(null)
   const [hasToken, setHasToken] = useState(Boolean(getAuthToken()))
+  const [scannedLeafContext, setScannedLeafContext] = useState(null)
 
   const updateNotifCount = useCallback(() => {
     fetchFarmNotifications().then(items => {
@@ -2939,7 +3546,8 @@ export default function AdminDashboard() {
               <Route index            element={<DashboardOverview farmSettings={farmSettings} />} />
               <Route path="trees"     element={<TreeBatchesPage />} />
               <Route path="fertilize" element={<FertilizerManagementPage />} />
-              <Route path="ai-scan"   element={<AIScanPage />} />
+              <Route path="ai-scan"   element={<AIScanPage onScanComplete={(ctx) => setScannedLeafContext(ctx)} />} />
+              <Route path="chat"      element={<AIConsultationPage scannedLeafContext={scannedLeafContext} onClearContext={() => setScannedLeafContext(null)} />} />
               <Route path="harvests"  element={<HarvestsPage />} />
               <Route path="farmers"   element={<FarmersPage />} />
               <Route path="settings"  element={<SettingsPage onSettingsUpdate={setFarmSettings} />} />
