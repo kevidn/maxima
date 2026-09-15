@@ -361,17 +361,20 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
   }
 
   if (identifier && identifier !== 'healthy') {
+    const isDiseasedQuery = identifier.toLowerCase().includes('sick') || identifier.toLowerCase().includes('flagged')
+    const isBatchQuery = identifier.toUpperCase().startsWith('BATCH')
+
     const res = await apiRequest(`/api/public/trace/${encodeURIComponent(identifier)}`)
     if (res.ok && res.data?.data) {
       const d = res.data.data
       return {
-        id: d.batchId || d.treeCode || identifier,
+        id: d.treeCode || d.treeId || (isBatchQuery ? 'PHN-BBS-001' : identifier),
         variety: d.variety || 'Jeruk Bali Merah',
-        location: d.location || 'Desa Bibis, Magetan',
+        location: d.location || d.locationBlock || 'Desa Bibis, Magetan',
         coordinates: d.coordinates || '7°37\'42"S 111°26\'18"E',
         planted: formatDateIndonesian(d.plantingDate) || '10 Jan 2026',
         farmer: d.farmerName || d.farmer?.name || 'Budi Santoso',
-        batch: d.batchId || identifier,
+        batch: d.batchId || (isBatchQuery ? identifier : 'Batch-2022-A'),
         certifiedOrganic: d.certifiedOrganic ?? true,
         aiConfidence: Number(d.aiConfidence) || 97.8,
         lastScanned: d.lastScanned || 'Hari ini',
@@ -383,13 +386,13 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
       }
     } else if (res.data && res.data.warning) {
       return {
-        id: res.data.data?.batchId || identifier,
-        variety: 'Jeruk Bali',
+        id: res.data.data?.treeCode || 'PHN-BBS-031',
+        variety: 'Jeruk Bali Merah',
         location: 'Desa Bibis, Magetan',
         coordinates: '7°37\'42"S 111°26\'18"E',
         planted: '2026',
         farmer: 'Petani Terdaftar',
-        batch: identifier,
+        batch: res.data.data?.batchId || (isBatchQuery ? identifier : 'BATCH-SICK-2026'),
         certifiedOrganic: false,
         aiConfidence: 91.2,
         lastScanned: 'Hari ini',
@@ -400,6 +403,14 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
         timeline: MOCK_TRACEABILITY.diseased.timeline
       }
     }
+
+    // Dynamic mock fallback when querying specific batch/tree ID
+    const baseMock = isDiseasedQuery ? MOCK_TRACEABILITY.diseased : MOCK_TRACEABILITY.healthy
+    return Promise.resolve({
+      ...baseMock,
+      id: isBatchQuery ? (isDiseasedQuery ? 'PHN-BBS-031' : 'PHN-BBS-001') : identifier,
+      batch: isBatchQuery ? identifier : (isDiseasedQuery ? 'BATCH-SICK-2026' : 'Batch-2022-A')
+    })
   }
 
   return Promise.resolve(MOCK_TRACEABILITY[identifier] || MOCK_TRACEABILITY.healthy)

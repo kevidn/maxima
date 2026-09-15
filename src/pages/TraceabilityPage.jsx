@@ -47,11 +47,11 @@ const HEALTHY_TREE = {
       detail: 'Pupuk kompos kascing + fermentasi MOL bonggol pisang. Dosis: 2kg/aplikasi. Terakhir: 15 Agustus 2026.',
       accent: '#a16207', bg: '#fffbeb', borderColor: '#fde68a',
       entries: [
-        { date: 'Mar 2022', type: 'Starter Organik',   dose: '1.5 kg'      },
-        { date: 'Jun 2022', type: 'Kompos Kascing',    dose: '2.0 kg'      },
-        { date: 'Sep 2022', type: 'MOL Bonggol',       dose: '1.5 L cair'  },
-        { date: 'Des 2022', type: 'Kompos Kascing',    dose: '2.0 kg'      },
-        { date: 'Agu 2026', type: 'Pupuk Kalium Org.', dose: '2.0 kg'      },
+        { date: 'Mar 2022', type: 'Starter Organik', dose: '1.5 kg' },
+        { date: 'Jun 2022', type: 'Kompos Kascing', dose: '2.0 kg' },
+        { date: 'Sep 2022', type: 'MOL Bonggol', dose: '1.5 L cair' },
+        { date: 'Des 2022', type: 'Kompos Kascing', dose: '2.0 kg' },
+        { date: 'Agu 2026', type: 'Pupuk Kalium Org.', dose: '2.0 kg' },
       ],
     },
     {
@@ -78,20 +78,20 @@ const DISEASED_TREE = {
 
 // ── Variants ──────────────────────────────────────────────
 const pageV = {
-  hidden:  { opacity: 0 },
+  hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.45, staggerChildren: 0.07 } },
 }
 const itemV = {
-  hidden:  { opacity: 0, y: 24, filter: 'blur(4px)' },
-  visible: { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.55, ease: [0.22,1,0.36,1] } },
+  hidden: { opacity: 0, y: 24, filter: 'blur(4px)' },
+  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
 }
 const cardV = {
-  hidden:  { opacity: 0, scale: 0.97, y: 18 },
-  visible: { opacity: 1, scale: 1,    y: 0,  transition: { duration: 0.6, ease: [0.22,1,0.36,1] } },
+  hidden: { opacity: 0, scale: 0.97, y: 18 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
 }
 const dangerV = {
-  hidden:  { opacity: 0, scale: 0.92 },
-  visible: { opacity: 1, scale: 1,   transition: { duration: 0.5, ease: [0.34,1.56,0.64,1] } },
+  hidden: { opacity: 0, scale: 0.92 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: [0.34, 1.56, 0.64, 1] } },
 }
 
 // ── Pomelo SVG (cross-section) ───────────────────────────
@@ -99,25 +99,25 @@ function PomeloSVG({ size = 48 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <circle cx="32" cy="32" r="28" fill="url(#pg)" />
-      {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i) => (
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((a, i) => (
         <line key={i} x1="32" y1="32"
-          x2={32+21*Math.cos(a*Math.PI/180)} y2={32+21*Math.sin(a*Math.PI/180)}
+          x2={32 + 21 * Math.cos(a * Math.PI / 180)} y2={32 + 21 * Math.sin(a * Math.PI / 180)}
           stroke="rgba(255,255,255,0.22)" strokeWidth="1"
         />
       ))}
-      <circle cx="32" cy="32" r="21" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1"/>
-      <circle cx="32" cy="32" r="6"  fill="rgba(255,255,255,0.25)" />
+      <circle cx="32" cy="32" r="21" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+      <circle cx="32" cy="32" r="6" fill="rgba(255,255,255,0.25)" />
       <ellipse cx="48" cy="14" rx="6" ry="10" fill="url(#lg)" transform="rotate(-40 48 14)" />
-      <line x1="48" y1="14" x2="43" y2="23" stroke="rgba(255,255,255,0.35)" strokeWidth="0.8"/>
+      <line x1="48" y1="14" x2="43" y2="23" stroke="rgba(255,255,255,0.35)" strokeWidth="0.8" />
       <defs>
         <radialGradient id="pg" cx="40%" cy="35%" r="60%">
-          <stop offset="0%"   stopColor="#ffa0a8"/>
-          <stop offset="40%"  stopColor="#e84f6b"/>
-          <stop offset="100%" stopColor="#8b1c2a"/>
+          <stop offset="0%" stopColor="#ffa0a8" />
+          <stop offset="40%" stopColor="#e84f6b" />
+          <stop offset="100%" stopColor="#8b1c2a" />
         </radialGradient>
         <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#5ec412"/>
-          <stop offset="100%" stopColor="#1b4332"/>
+          <stop offset="0%" stopColor="#5ec412" />
+          <stop offset="100%" stopColor="#1b4332" />
         </linearGradient>
       </defs>
     </svg>
@@ -126,14 +126,14 @@ function PomeloSVG({ size = 48 }) {
 
 // ── AI Confidence Arc ─────────────────────────────────────
 function AIArc({ value, isDiseased }) {
-  const color  = isDiseased ? '#c25c52' : '#2d6a4f'
+  const color = isDiseased ? '#c25c52' : '#2d6a4f'
   const trackC = isDiseased ? '#faeae8' : '#eef7f1'
   const r = 34
   const circ = 2 * Math.PI * r
   return (
     <div className="relative flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
       <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute">
-        <circle cx="50" cy="50" r={r} fill="none" stroke={trackC} strokeWidth="7"/>
+        <circle cx="50" cy="50" r={r} fill="none" stroke={trackC} strokeWidth="7" />
         <motion.circle
           cx="50" cy="50" r={r} fill="none"
           stroke={color} strokeWidth="7" strokeLinecap="round"
@@ -146,13 +146,13 @@ function AIArc({ value, isDiseased }) {
       </svg>
       <div className="text-center z-10">
         <motion.span
-          className="block font-mono text-lg sm:text-xl font-semibold"
+          className="block font-mono text-lg sm:text-xl font-bold"
           style={{ color }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}
         >
           {value}%
         </motion.span>
-        <span className="block font-mono text-[8px] uppercase tracking-widest mt-0.5" style={{ color: '#a8a29e' }}>
+        <span className="block font-mono text-xs uppercase tracking-wider mt-0.5 font-bold" style={{ color: '#78716c' }}>
           AI Score
         </span>
       </div>
@@ -194,28 +194,28 @@ function TimelineEntry({ item, index, totalItems = 5 }) {
       <div className="flex-1 min-w-0 pb-7">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="min-w-0">
-            <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] font-medium" style={{ color: item.accent }}>
+            <span className="font-mono text-xs uppercase tracking-wider font-bold" style={{ color: item.accent }}>
               {item.phase}
             </span>
-            <h3 className="font-heading text-lg sm:text-xl font-semibold text-stone-900 leading-tight mt-0.5">
+            <h3 className="font-sans text-lg sm:text-xl font-bold tracking-tight text-stone-900 leading-tight mt-0.5">
               {item.label}
             </h3>
           </div>
-          <span className="font-mono text-[9px] text-stone-700 font-semibold bg-stone-100 border border-stone-300 rounded-lg px-2.5 py-1 flex-shrink-0 mt-1 whitespace-nowrap">
+          <span className="font-sans text-xs text-stone-900 font-bold bg-stone-100 border border-stone-300 rounded-lg px-2.5 py-1 flex-shrink-0 mt-1 whitespace-nowrap">
             {item.date}
           </span>
         </div>
-        <p className="text-sm text-stone-500 leading-relaxed">{item.detail}</p>
+        <p className="text-sm text-stone-600 leading-relaxed">{item.detail}</p>
 
         {item.entries && (
           <>
             <button
               id={`expand-${item.id}`}
               onClick={() => setExpanded(!expanded)}
-              className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider min-h-[36px] font-medium transition-colors"
+              className="mt-3 flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider min-h-[36px] font-bold transition-colors"
               style={{ color: item.accent }}
             >
-              <ChevronDown size={12} className="transition-transform duration-300" style={{ transform: expanded ? 'rotate(180deg)' : 'none' }} />
+              <ChevronDown size={14} className="transition-transform duration-300" style={{ transform: expanded ? 'rotate(180deg)' : 'none' }} />
               {expanded ? 'Sembunyikan' : 'Lihat riwayat lengkap'}
             </button>
             <AnimatePresence>
@@ -304,7 +304,7 @@ function LoadingScreen() {
         MEMVERIFIKASI
       </div>
       <div className="flex gap-1.5 mt-3">
-        {[0,1,2].map(i => (
+        {[0, 1, 2].map(i => (
           <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-forest-600"
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
@@ -351,9 +351,10 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
 
   return (
     <div className={`min-h-screen relative overflow-x-hidden ${isDiseased ? 'qr-page-bg-diseased' : 'qr-page-bg'}`}
-      style={{ background: isDiseased
-        ? 'radial-gradient(ellipse 60% 40% at 50% -5%, #faeae8, transparent 65%), #f9f8f5'
-        : undefined
+      style={{
+        background: isDiseased
+          ? 'radial-gradient(ellipse 60% 40% at 50% -5%, #faeae8, transparent 65%), #f9f8f5'
+          : undefined
       }}
     >
       <AnimatePresence>
@@ -473,9 +474,9 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-stone-100">
                 {[
-                  { label: 'ID Pohon', value: tree.id,      Icon: QrCode       },
-                  { label: 'Petani',   value: tree.farmer,  Icon: Leaf         },
-                  { label: 'Batch',    value: tree.batch,   Icon: PackageCheck },
+                  { label: 'ID Pohon', value: tree.id, Icon: QrCode },
+                  { label: 'Petani', value: tree.farmer, Icon: Leaf },
+                  { label: 'Batch', value: tree.batch, Icon: PackageCheck },
                 ].map(s => (
                   <div key={s.label} className="text-center px-1">
                     <s.Icon size={13} className="mx-auto mb-1 text-stone-500" />
@@ -542,8 +543,8 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
                     <CalendarDays size={18} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-forest-700">Target Panen</div>
-                    <div className="font-heading text-xl sm:text-2xl font-semibold text-forest-900">{tree.harvestDate}</div>
+                    <div className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold">Target Panen</div>
+                    <div className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-forest-900">{tree.harvestDate}</div>
                   </div>
                 </div>
               </motion.div>

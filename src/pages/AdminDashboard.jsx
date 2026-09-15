@@ -178,7 +178,7 @@ function QRCodeModal({ batch, onClose }) {
                 <span className="font-mono text-[11px] uppercase tracking-wider text-forest-700 font-bold block">
                   Label Lacak Balak
                 </span>
-                <h3 className="font-heading text-xl font-bold text-stone-900 leading-tight">
+                <h3 className="font-sans text-xl font-bold tracking-tight text-stone-900 leading-tight">
                   {targetId}
                 </h3>
               </div>
@@ -282,7 +282,7 @@ function BatchDetailModal({ batch, onClose, onOpenQr }) {
                 <span className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold block">
                   Detail Pohon / Lahan
                 </span>
-                <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900 truncate">
+                <h2 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-stone-900 truncate">
                   {batch.treeCode || batch.id}
                 </h2>
                 <div className="font-body text-sm font-semibold text-stone-600 truncate">
@@ -1202,7 +1202,7 @@ function DashboardOverview({ farmSettings }) {
                   <Icon size={18} />
                 </div>
               </div>
-              <div className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">{s.value}</div>
+              <div className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">{s.value}</div>
               <div className="font-mono text-xs text-stone-500 mt-1 flex items-center gap-1 font-medium">
                 {s.trend === 'up' ? <ArrowUpRight size={13} className="text-emerald-600" /> : <ArrowDownRight size={13} className="text-red-500" />}
                 <span>{s.sub}</span>
@@ -1415,7 +1415,7 @@ function TreeBatchesPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <span className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold block">{b.location || b.locationBlock}</span>
-                      <h3 className="font-heading text-xl sm:text-2xl font-bold text-stone-900 mt-0.5">{b.treeCode || b.id}</h3>
+                      <h3 className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-stone-900 mt-0.5">{b.treeCode || b.id}</h3>
                       <p className="font-body text-sm font-semibold text-stone-600">{b.variety}</p>
                     </div>
                     <span className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${
@@ -1600,7 +1600,7 @@ function FertilizerManagementPage() {
               ) : (
                 schedules.map((f) => (
                   <tr key={f.id || f.dbId} className="hover:bg-stone-50/70 transition-colors">
-                    <td className="py-3.5 px-3 font-mono font-bold text-forest-800 text-sm">
+                    <td className="py-3.5 px-3 font-sans font-bold tracking-tight text-forest-800 text-sm">
                       {f.treeCode || f.id}
                     </td>
                     <td className="py-3.5 px-3 font-semibold text-stone-900 text-sm">
