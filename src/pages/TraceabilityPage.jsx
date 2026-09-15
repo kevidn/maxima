@@ -15,65 +15,20 @@ import {
   Search
 } from 'lucide-react'
 
-// ── Mock data ─────────────────────────────────────────────
-const HEALTHY_TREE = {
-  id: 'POM-BBS-0047',
+// ── Default Dynamic Fallback Template ─────────────────────
+const INITIAL_TREE_STATE = {
+  id: '',
   variety: 'Jeruk Bali Merah',
   location: 'Desa Bibis, Magetan',
   coordinates: '7°37\'42"S 111°26\'18"E',
-  planted: '12 Maret 2022',
-  farmer: 'Pak Suwanto',
-  batch: 'Batch-2022-A',
+  planted: '-',
+  farmer: '-',
+  batch: '-',
   certifiedOrganic: true,
-  aiConfidence: 98.4,
-  lastScanned: '7 Sep 2026',
-  harvestDate: 'Oktober 2026',
-  timeline: [
-    {
-      id: 'seed', icon: Sprout, phase: 'Pembibitan', label: 'Bibit Ditanam',
-      date: '12 Mar 2022',
-      detail: 'Bibit varietas Jeruk Bali Merah dari persemaian bersertifikat. Media: campuran tanah liat + kompos organik.',
-      accent: '#2d6a4f', bg: '#eef7f1', borderColor: '#b7e4c7',
-    },
-    {
-      id: 'water', icon: Droplets, phase: 'Irigasi', label: 'Program Irigasi Tetes',
-      date: 'Apr 2022 – kini',
-      detail: 'Irigasi tetes otomatis 2× sehari. Volume: 4L/pohon/hari. Sumber: mata air alami Gunung Lawu.',
-      accent: '#1d6f8e', bg: '#f0f7fb', borderColor: '#b3dbed',
-    },
-    {
-      id: 'fertilize', icon: FlaskConical, phase: 'Pemupukan', label: 'Jadwal Pupuk Organik',
-      date: 'Setiap 3 Bulan',
-      detail: 'Pupuk kompos kascing + fermentasi MOL bonggol pisang. Dosis: 2kg/aplikasi. Terakhir: 15 Agustus 2026.',
-      accent: '#a16207', bg: '#fffbeb', borderColor: '#fde68a',
-      entries: [
-        { date: 'Mar 2022', type: 'Starter Organik', dose: '1.5 kg' },
-        { date: 'Jun 2022', type: 'Kompos Kascing', dose: '2.0 kg' },
-        { date: 'Sep 2022', type: 'MOL Bonggol', dose: '1.5 L cair' },
-        { date: 'Des 2022', type: 'Kompos Kascing', dose: '2.0 kg' },
-        { date: 'Agu 2026', type: 'Pupuk Kalium Org.', dose: '2.0 kg' },
-      ],
-    },
-    {
-      id: 'ai', icon: Zap, phase: 'Pemeriksaan AI', label: 'Deteksi MobileNetV2',
-      date: '5 Sep 2026',
-      detail: 'Model AI MobileNetV2 menganalisis foto daun. Tidak ada indikasi penyakit HLB, kudis, atau antraknosa.',
-      accent: '#6d28d9', bg: '#f5f3ff', borderColor: '#ddd6fe',
-    },
-    {
-      id: 'harvest', icon: PackageCheck, phase: 'Panen', label: 'Target Panen',
-      date: 'Oktober 2026',
-      detail: 'Estimasi bobot buah: 1.2–1.8 kg/buah. Distribusi ke pasar lokal Magetan dan Surabaya.',
-      accent: '#1b4332', bg: '#eef7f1', borderColor: '#b7e4c7',
-    },
-  ],
-}
-
-const DISEASED_TREE = {
-  ...HEALTHY_TREE,
-  id: 'POM-BBS-0031', aiConfidence: 91.2, flagged: true,
-  flagReason: 'Terdeteksi gejala Huanglongbing (HLB) / Citrus Greening Disease. Pohon ini tidak boleh dipanen atau diperdagangkan.',
-  flagDetail: 'Model AI MobileNetV2 mendeteksi pola daun "blotchy mottle" dan ukuran buah asimetris pada 3 dari 7 sampel foto. Confidence: 91.2%.',
+  aiConfidence: 0,
+  lastScanned: '-',
+  harvestDate: '-',
+  timeline: [],
 }
 
 // ── Variants ──────────────────────────────────────────────
@@ -320,13 +275,13 @@ function LoadingScreen() {
 export default function TraceabilityPage({ treeStatus = 'healthy' }) {
   const { treeId } = useParams()
   const isDiseasedParam = treeStatus === 'diseased'
-  const [tree, setTree] = useState(isDiseasedParam ? DISEASED_TREE : HEALTHY_TREE)
+  const [tree, setTree] = useState(INITIAL_TREE_STATE)
   const [loading, setLoading] = useState(true)
   const [searchInput, setSearchInput] = useState(treeId || '')
 
   useEffect(() => {
     let isMounted = true
-    const identifier = treeId || (treeStatus === 'diseased' ? 'diseased' : 'healthy')
+    const identifier = treeId || (treeStatus === 'diseased' ? 'BATCH-SICK-20260320' : 'BATCH-BBS001-20260315')
 
     fetchTraceabilityData(identifier)
       .then((data) => {
@@ -337,7 +292,11 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
       })
       .catch(() => {
         if (isMounted) {
-          setTree(treeStatus === 'diseased' ? DISEASED_TREE : HEALTHY_TREE)
+          setTree({
+            notFound: true,
+            identifier: identifier,
+            message: 'Gagal terhubung ke database. Silakan periksa koneksi internet Anda.'
+          })
           setLoading(false)
         }
       })
@@ -437,117 +396,136 @@ export default function TraceabilityPage({ treeStatus = 'healthy' }) {
               </div>
             </motion.div>
 
-            {/* ── Disease warning ── */}
-            {isDiseased && <DiseaseBanner tree={tree} />}
-
-            {/* ── Hero identity card ── */}
-            <motion.div variants={cardV} className={`card${isDiseased ? '-coral' : '-forest'} p-4 sm:p-6 mb-4 sm:mb-5`}>
-
-              <div className="flex flex-col sm:flex-row items-start gap-4">
-                {/* Stamp */}
-                <div className="authentic-stamp w-16 h-16 sm:w-18 sm:h-18 flex items-center justify-center flex-shrink-0 p-1"
-                  style={{ borderColor: isDiseased ? '#f0b8b3' : '#b7e4c7' }}
-                >
-                  <PomeloSVG size={56} />
+            {/* ── Not Found Screen ── */}
+            {tree?.notFound ? (
+              <motion.div variants={cardV} className="card p-6 text-center mb-5 border-stone-300">
+                <div className="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-3 text-stone-400">
+                  <Search size={24} />
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  {isDiseased
-                    ? <span className="badge-coral">Terdeteksi Sakit</span>
-                    : <span className="badge-forest">✓ Organik Tersertifikasi</span>
-                  }
-                  <h1 className="font-heading text-2xl sm:text-3xl font-bold leading-tight mt-2"
-                    style={{ color: isDiseased ? '#9b2226' : '#1c1917' }}
-                  >
-                    {tree.variety}
-                  </h1>
-                  <div className="flex items-center gap-1.5 mt-1.5 text-stone-600">
-                    <MapPin size={10} className="flex-shrink-0 text-stone-500" />
-                    <span className="font-mono text-[9px] sm:text-[10px] truncate">{tree.location}</span>
-                  </div>
-                  <div className="font-mono text-[8px] text-stone-500 mt-0.5 hidden sm:block">
-                    {tree.coordinates}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-stone-100">
-                {[
-                  { label: 'ID Pohon', value: tree.id, Icon: QrCode },
-                  { label: 'Petani', value: tree.farmer, Icon: Leaf },
-                  { label: 'Batch', value: tree.batch, Icon: PackageCheck },
-                ].map(s => (
-                  <div key={s.label} className="text-center px-1">
-                    <s.Icon size={13} className="mx-auto mb-1 text-stone-500" />
-                    <div className="font-mono text-[7px] sm:text-[8px] uppercase tracking-[0.1em] text-stone-500 mb-0.5 font-medium">{s.label}</div>
-                    <div className="font-mono text-[10px] sm:text-[11px] text-stone-700 truncate font-semibold">{s.value}</div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* ── AI Confidence card ── */}
-            <motion.div variants={cardV} className="card p-4 sm:p-5 mb-4 sm:mb-5 flex items-center gap-4">
-              <AIArc value={tree.aiConfidence} isDiseased={isDiseased} />
-              <div className="flex-1 min-w-0">
-                <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-stone-500 mb-1 font-semibold">
-                  Analisis AI — MobileNetV2
-                </div>
-                <h2 className="font-heading text-base sm:text-lg font-semibold leading-tight"
-                  style={{ color: isDiseased ? '#c25c52' : '#1b4332' }}
-                >
-                  {isDiseased ? 'Penyakit HLB Terdeteksi' : 'Pohon Sehat & Bebas Penyakit'}
-                </h2>
-                <p className="text-xs text-stone-600 mt-1 leading-relaxed line-clamp-2">
-                  {isDiseased
-                    ? 'Distribusi diblokir otomatis. Notifikasi dikirim ke Dinas Pertanian.'
-                    : 'Tidak ada patogen pada 7 sampel foto daun terbaru.'}
-                </p>
-                <div className="flex items-center gap-1.5 mt-2">
-                  <Clock size={9} className="text-stone-400 flex-shrink-0" />
-                  <span className="font-mono text-[8px] sm:text-[9px] text-stone-500 font-medium">Scan: {tree.lastScanned}</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* ── Section divider ── */}
-            {!isDiseased && (
-              <motion.div variants={itemV} className="mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-stone-300" />
-                  <span className="font-display text-[9px] sm:text-[10px] tracking-[0.2em] text-stone-500 px-2 whitespace-nowrap font-semibold">
-                    TANAH KE MEJA
-                  </span>
-                  <div className="h-px flex-1 bg-stone-300" />
+                <h3 className="font-heading text-lg font-bold text-stone-900 mb-1">Data Tidak Ditemukan</h3>
+                <p className="text-xs text-stone-600 mb-4">{tree.message || 'Nomor Batch atau Kode Pohon tidak terdaftar di database.'}</p>
+                <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-xl text-left text-xs font-mono text-stone-600 space-y-1">
+                  <div className="font-bold text-stone-800">Coba gunakan data yang terdaftar:</div>
+                  <div className="text-emerald-700">• BATCH-BBS001-20260315 (Sehat)</div>
+                  <div className="text-red-700">• BATCH-SICK-20260320 (Karantina)</div>
+                  <div className="text-stone-700">• PHN-BBS-001 (Kode Pohon)</div>
                 </div>
               </motion.div>
-            )}
+            ) : (
+              <>
+                {/* ── Disease warning ── */}
+                {isDiseased && <DiseaseBanner tree={tree} />}
 
-            {/* ── Timeline ── */}
-            {!isDiseased && (
-              <motion.div variants={{ visible: { transition: { staggerChildren: 0.1 } } }}>
-                {tree.timeline?.map((item, i) => (
-                  <TimelineEntry key={item.id || i} item={item} index={i} totalItems={tree.timeline?.length || 5} />
-                ))}
-              </motion.div>
-            )}
+                {/* ── Hero identity card ── */}
+                <motion.div variants={cardV} className={`card${isDiseased ? '-coral' : '-forest'} p-4 sm:p-6 mb-4 sm:mb-5`}>
 
-            {/* ── Harvest card ── */}
-            {!isDiseased && (
-              <motion.div variants={cardV} className="card-sage p-4 sm:p-5 mt-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl btn-primary flex items-center justify-center flex-shrink-0"
-                    style={{ background: '#1b4332', minHeight: 'auto', padding: 0 }}
-                  >
-                    <CalendarDays size={18} className="text-white" />
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    {/* Stamp */}
+                    <div className="authentic-stamp w-16 h-16 sm:w-18 sm:h-18 flex items-center justify-center flex-shrink-0 p-1"
+                      style={{ borderColor: isDiseased ? '#f0b8b3' : '#b7e4c7' }}
+                    >
+                      <PomeloSVG size={56} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {isDiseased
+                        ? <span className="badge-coral">Terdeteksi Sakit</span>
+                        : <span className="badge-forest">✓ Organik Tersertifikasi</span>
+                      }
+                      <h1 className="font-heading text-2xl sm:text-3xl font-bold leading-tight mt-2"
+                        style={{ color: isDiseased ? '#9b2226' : '#1c1917' }}
+                      >
+                        {tree.variety}
+                      </h1>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-stone-600">
+                        <MapPin size={10} className="flex-shrink-0 text-stone-500" />
+                        <span className="font-mono text-[9px] sm:text-[10px] truncate">{tree.location}</span>
+                      </div>
+                      <div className="font-mono text-[8px] text-stone-500 mt-0.5 hidden sm:block">
+                        {tree.coordinates}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold">Target Panen</div>
-                    <div className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-forest-900">{tree.harvestDate}</div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-stone-100">
+                    {[
+                      { label: 'ID Pohon', value: tree.id || '-', Icon: QrCode },
+                      { label: 'Petani', value: tree.farmer || '-', Icon: Leaf },
+                      { label: 'Batch', value: tree.batch || '-', Icon: PackageCheck },
+                    ].map(s => (
+                      <div key={s.label} className="text-center px-1">
+                        <s.Icon size={13} className="mx-auto mb-1 text-stone-500" />
+                        <div className="font-mono text-[7px] sm:text-[8px] uppercase tracking-[0.1em] text-stone-500 mb-0.5 font-medium">{s.label}</div>
+                        <div className="font-mono text-[10px] sm:text-[11px] text-stone-700 truncate font-semibold">{s.value}</div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+
+                {/* ── AI Confidence card ── */}
+                <motion.div variants={cardV} className="card p-4 sm:p-5 mb-4 sm:mb-5 flex items-center gap-4">
+                  <AIArc value={tree.aiConfidence || 0} isDiseased={isDiseased} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.14em] text-stone-500 mb-1 font-semibold">
+                      Analisis AI — MobileNetV2
+                    </div>
+                    <h2 className="font-heading text-base sm:text-lg font-semibold leading-tight"
+                      style={{ color: isDiseased ? '#c25c52' : '#1b4332' }}
+                    >
+                      {isDiseased ? 'Penyakit HLB Terdeteksi' : 'Pohon Sehat & Bebas Penyakit'}
+                    </h2>
+                    <p className="text-xs text-stone-600 mt-1 leading-relaxed line-clamp-2">
+                      {isDiseased
+                        ? 'Distribusi diblokir otomatis. Notifikasi dikirim ke Dinas Pertanian.'
+                        : 'Tidak ada patogen pada sampel diagnosis AI terbaru.'}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <Clock size={9} className="text-stone-400 flex-shrink-0" />
+                      <span className="font-mono text-[8px] sm:text-[9px] text-stone-500 font-medium">Scan: {tree.lastScanned || 'Hari ini'}</span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* ── Section divider ── */}
+                {!isDiseased && (
+                  <motion.div variants={itemV} className="mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-stone-300" />
+                      <span className="font-display text-[9px] sm:text-[10px] tracking-[0.2em] text-stone-500 px-2 whitespace-nowrap font-semibold">
+                        TANAH KE MEJA
+                      </span>
+                      <div className="h-px flex-1 bg-stone-300" />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Timeline ── */}
+                {!isDiseased && (
+                  <motion.div variants={{ visible: { transition: { staggerChildren: 0.1 } } }}>
+                    {tree.timeline?.map((item, i) => (
+                      <TimelineEntry key={item.id || i} item={item} index={i} totalItems={tree.timeline?.length || 5} />
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* ── Harvest card ── */}
+                {!isDiseased && (
+                  <motion.div variants={cardV} className="card-sage p-4 sm:p-5 mt-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl btn-primary flex items-center justify-center flex-shrink-0"
+                        style={{ background: '#1b4332', minHeight: 'auto', padding: 0 }}
+                      >
+                        <CalendarDays size={18} className="text-white" />
+                      </div>
+                      <div>
+                        <div className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold">Target Panen</div>
+                        <div className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-forest-900">{tree.harvestDate || '-'}</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
 
             {/* ── Footer ── */}

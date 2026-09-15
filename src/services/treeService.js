@@ -27,201 +27,30 @@ export function removeAuthToken() {
   sessionStorage.removeItem('pomelo_auth_token')
 }
 
-// ── Master Mock Fallback Data ──────────────────────────────
-const MOCK_HEALTH_TREND = [
-  { month: 'Mar', healthy: 82, flagged: 3 },
-  { month: 'Apr', healthy: 88, flagged: 2 },
-  { month: 'Mei', healthy: 85, flagged: 5 },
-  { month: 'Jun', healthy: 91, flagged: 2 },
-  { month: 'Jul', healthy: 94, flagged: 1 },
-  { month: 'Agu', healthy: 89, flagged: 4 },
-  { month: 'Sep', healthy: 96, flagged: 1 },
-]
-
-const MOCK_FERTILIZER_SCHEDULE = [
-  { id: 'F001', dbId: 'mock-f1', batch: 'Batch-2022-A', treeCode: 'PHN-BBS-001', trees: 24, type: 'Kompos Kascing',  date: '15 Sep 2026', status: 'scheduled', notes: 'Dosis 2kg/pohon' },
-  { id: 'F002', dbId: 'mock-f2', batch: 'Batch-2022-B', treeCode: 'PHN-BBS-002', trees: 18, type: 'MOL Bonggol',     date: '18 Sep 2026', status: 'scheduled', notes: 'Kocor 1.5L cair' },
-  { id: 'F003', dbId: 'mock-f3', batch: 'Batch-2023-A', treeCode: 'PHN-BBS-003', trees: 31, type: 'Pupuk Kalium',    date: '10 Sep 2026', status: 'done',      notes: 'Aplikasi selesai' },
-  { id: 'F004', dbId: 'mock-f4', batch: 'Batch-2023-B', treeCode: 'PHN-BBS-004', trees: 15, type: 'Starter Organik', date: '22 Sep 2026', status: 'scheduled', notes: 'Media tanam baru' },
-]
-
-const MOCK_AI_ALERTS = [
-  { id: 'POM-0031', treeId: 'tree-31', batch: 'Blok B-03', disease: 'Bercak Ganggang (Cephaleuros virescens)', confidence: 91.2, time: '2j lalu', severity: 'high', symptoms: 'Bercak kuning kemerahan asimetris pada daun tua.', advisory: 'Pangkas daun terinfeksi dan semprotkan fungisida tembaga.', photoUrl: null },
-  { id: 'POM-0058', treeId: 'tree-58', batch: 'Blok A-01', disease: 'Kudis Sitrus (Citrus Scab)',           confidence: 78.5, time: '5j lalu', severity: 'medium', symptoms: 'Bintik gabus menonjol coklat kekuningan.', advisory: 'Semprotkan larutan hayati Trichoderma.', photoUrl: null },
-  { id: 'POM-0012', treeId: 'tree-12', batch: 'Blok A-02', disease: 'Antraknosa Daun',                      confidence: 65.1, time: '1h lalu', severity: 'low', symptoms: 'Bercak nekrotik kering di ujung daun.', advisory: 'Jaga kelembapan tanah dan sanitasi daun rontok.', photoUrl: null },
-  { id: 'POM-0094', treeId: 'tree-94', batch: 'Blok B-01', disease: 'Bercak Daun Alternaria',             confidence: 82.0, time: '2h lalu', severity: 'medium', symptoms: 'Bercak konsentris coklat kehitaman.', advisory: 'Aplikasi biopestisida fermentasi mimba.', photoUrl: null },
-]
-
-const MOCK_TREE_BATCHES = [
-  { id: 'PHN-BBS-001', dbId: 'tree-mock-1', treeCode: 'PHN-BBS-001', count: 24, healthy: 24, flagged: 0, healthStatus: 'Sehat', location: 'Blok A-01', locationBlock: 'Blok A-01', variety: 'Jeruk Bali Merah', plantedDate: '10 Jan 2026', coordinates: '7°37\'42"S 111°26\'18"E', ageMonths: 8.1, farmerName: 'Budi Santoso' },
-  { id: 'PHN-BBS-002-SICK', dbId: 'tree-mock-2', treeCode: 'PHN-BBS-002-SICK', count: 18, healthy: 0, flagged: 18, healthStatus: 'Sakit', location: 'Blok B-03', locationBlock: 'Blok B-03', variety: 'Jeruk Bali Putih', plantedDate: '15 Jan 2026', coordinates: '7°37\'45"S 111°26\'22"E', ageMonths: 7.9, farmerName: 'Budi Santoso' },
-  { id: 'Batch-2023-A', dbId: 'tree-mock-3', treeCode: 'PHN-BBS-003', count: 31, healthy: 31, flagged: 0, healthStatus: 'Sehat', location: 'Blok Selatan', locationBlock: 'Blok Selatan', variety: 'Jeruk Bali Merah', plantedDate: '05 Jan 2023', coordinates: '7°37\'40"S 111°26\'15"E', ageMonths: 44.2, farmerName: 'Siti Rahma' },
-  { id: 'Batch-2023-B', dbId: 'tree-mock-4', treeCode: 'PHN-BBS-004', count: 15, healthy: 15, flagged: 0, healthStatus: 'Sehat', location: 'Blok Barat', locationBlock: 'Blok Barat', variety: 'Jeruk Bali Merah', plantedDate: '20 Mei 2023', coordinates: '7°37\'48"S 111°26\'30"E', ageMonths: 39.7, farmerName: 'Pak Suwanto' },
-]
-
-const MOCK_HARVESTS = [
-  { id: 'harv-1', treeId: 'tree-mock-1', treeCode: 'PHN-BBS-001', batchId: 'BATCH-BBS001-20260315', harvestDate: '15 Mar 2026', estimatedFruits: 45, status: 'Verified', notes: 'Kualitas buah grade A', qrPdfPath: null, farmerName: 'Budi Santoso', variety: 'Jeruk Bali Merah' },
-  { id: 'harv-2', treeId: 'tree-mock-2', treeCode: 'PHN-BBS-002-SICK', batchId: 'BATCH-SICK-20260320', harvestDate: '20 Mar 2026', estimatedFruits: 20, status: 'Verified', notes: 'Dipanen saat gejala daun', qrPdfPath: null, farmerName: 'Budi Santoso', variety: 'Jeruk Bali Putih' },
-]
-
-const MOCK_FARMERS = [
-  { id: 'farm-1', name: 'Budi Santoso', email: 'petani1@maxima.com', role: 'farmer', phone: '081298765432', location: 'Desa Bibis, Blok Utara', treeCount: 2, harvestCount: 2 },
-  { id: 'farm-2', name: 'Siti Rahma', email: 'petani2@maxima.com', role: 'farmer', phone: '081345678912', location: 'Desa Bibis, Blok Selatan', treeCount: 1, harvestCount: 0 },
-  { id: 'farm-3', name: 'Pak Suwanto', email: 'suwanto@maxima.com', role: 'farmer', phone: '081234567899', location: 'Desa Bibis, Magetan', treeCount: 1, harvestCount: 1 },
-]
-
-const MOCK_TRACEABILITY = {
-  healthy: {
-    id: 'POM-BBS-0047',
-    variety: 'Jeruk Bali Merah',
-    location: 'Desa Bibis, Magetan',
-    coordinates: '7°37\'42"S 111°26\'18"E',
-    planted: '12 Maret 2022',
-    farmer: 'Pak Suwanto',
-    batch: 'Batch-2022-A',
-    certifiedOrganic: true,
-    aiConfidence: 98.4,
-    lastScanned: '7 Sep 2026',
-    harvestDate: 'Oktober 2026',
-    timeline: [
-      {
-        id: 'seed',
-        phase: 'Pembibitan',
-        label: 'Bibit Ditanam',
-        date: '12 Mar 2022',
-        detail: 'Bibit varietas Jeruk Bali Merah dari persemaian bersertifikat. Media: campuran tanah liat + kompos organik.',
-        accent: '#2d6a4f',
-        bg: '#eef7f1',
-        borderColor: '#b7e4c7'
-      },
-      {
-        id: 'water',
-        phase: 'Irigasi',
-        label: 'Program Irigasi Tetes',
-        date: 'Apr 2022 – kini',
-        detail: 'Irigasi tetes otomatis 2× sehari. Volume: 4L/pohon/hari. Sumber: mata air alami Gunung Lawu.',
-        accent: '#1d6f8e',
-        bg: '#f0f7fb',
-        borderColor: '#b3dbed'
-      },
-      {
-        id: 'fertilize',
-        phase: 'Pemupukan',
-        label: 'Jadwal Pupuk Organik',
-        date: 'Setiap 3 Bulan',
-        detail: 'Pupuk kompos kascing + fermentasi MOL bonggol pisang. Dosis: 2kg/aplikasi. Terakhir: 15 Agustus 2026.',
-        accent: '#a16207',
-        bg: '#fffbeb',
-        borderColor: '#fde68a',
-        entries: [
-          { date: 'Mar 2022', type: 'Starter Organik',  dose: '1.5 kg'   },
-          { date: 'Jun 2022', type: 'Kompos Kascing',   dose: '2.0 kg'   },
-          { date: 'Sep 2022', type: 'MOL Bonggol',      dose: '1.5 L cair' },
-          { date: 'Des 2022', type: 'Kompos Kascing',   dose: '2.0 kg'   },
-          { date: 'Agu 2026', type: 'Pupuk Kalium Org.', dose: '2.0 kg'  },
-        ],
-      },
-      {
-        id: 'ai',
-        phase: 'Pemeriksaan AI',
-        label: 'Deteksi MobileNetV2',
-        date: '5 Sep 2026',
-        detail: 'Model AI MobileNetV2 menganalisis foto daun. Tidak ada indikasi penyakit HLB, kudis, atau antraknosa.',
-        accent: '#6d28d9',
-        bg: '#f5f3ff',
-        borderColor: '#ddd6fe'
-      },
-      {
-        id: 'harvest',
-        phase: 'Panen',
-        label: 'Target Panen',
-        date: 'Oktober 2026',
-        detail: 'Estimasi bobot buah: 1.2–1.8 kg/buah. Distribusi ke pasar lokal Magetan dan Surabaya.',
-        accent: '#1b4332',
-        bg: '#eef7f1',
-        borderColor: '#b7e4c7'
-      },
-    ],
-  },
-  diseased: {
-    id: 'POM-BBS-0031',
-    variety: 'Jeruk Bali Merah',
-    location: 'Desa Bibis, Magetan',
-    coordinates: '7°37\'42"S 111°26\'18"E',
-    planted: '12 Maret 2022',
-    farmer: 'Pak Suwanto',
-    batch: 'Batch-2022-A',
-    certifiedOrganic: true,
-    aiConfidence: 91.2,
-    flagged: true,
-    flagReason: 'Terdeteksi gejala Huanglongbing (HLB) / Citrus Greening Disease. Pohon ini tidak boleh dipanen atau diperdagangkan.',
-    flagDetail: 'Model AI MobileNetV2 mendeteksi pola daun "blotchy mottle" dan ukuran buah asimetris pada 3 dari 7 sampel foto. Confidence: 91.2%.',
-    lastScanned: '7 Sep 2026',
-    harvestDate: 'Ditangguhkan',
-    timeline: [
-      {
-        id: 'seed',
-        phase: 'Pembibitan',
-        label: 'Bibit Ditanam',
-        date: '12 Mar 2022',
-        detail: 'Bibit varietas Jeruk Bali Merah dari persemaian bersertifikat. Media: campuran tanah liat + kompos organik.',
-        accent: '#2d6a4f',
-        bg: '#eef7f1',
-        borderColor: '#b7e4c7'
-      },
-      {
-        id: 'ai',
-        phase: 'Pemeriksaan AI',
-        label: 'Deteksi MobileNetV2',
-        date: '5 Sep 2026',
-        detail: 'Model AI mendeteksi positif gejala HLB (Citrus Greening). Tindakan karantina diaktifkan.',
-        accent: '#c25c52',
-        bg: '#faeae8',
-        borderColor: '#f0b8b3'
-      },
-    ]
-  }
-}
-
-let fertilizerSchedules = [...MOCK_FERTILIZER_SCHEDULE]
-let treeBatches = [...MOCK_TREE_BATCHES]
-let aiAlerts = [...MOCK_AI_ALERTS]
-let harvestReports = [...MOCK_HARVESTS]
-let farmerAccounts = [...MOCK_FARMERS]
+// ── Master Dynamic Cache Data (Live API Driven) ───────────
+let fertilizerSchedules = []
+let treeBatches = []
+let aiAlerts = []
+let harvestReports = []
+let farmerAccounts = []
 
 let farmNotifications = [
   {
     id: 'notif-1',
-    title: 'Peringatan Dini HLB (Citrus Greening)',
-    desc: 'Deteksi AI menemukan gejala HLB pada Batch-2022-A dengan confidence 91.2%. Segera lakukan tindakan isolasi.',
-    time: '2 jam lalu',
-    unread: true,
-    type: 'danger'
-  },
-  {
-    id: 'notif-2',
-    title: 'Jadwal Pemupukan Organik Besok',
-    desc: 'Aplikasi Kompos Kascing 24 pohon untuk Batch-2022-A dijadwalkan besok pagi.',
-    time: '5 jam lalu',
-    unread: true,
-    type: 'warning'
-  },
-  {
-    id: 'notif-3',
-    title: 'Prospek Panen Jeruk Bali Merah',
-    desc: 'Batch-2023-A siap memasuki fase persiapan panen bulan depan (estimasi 1.5 kg/buah).',
-    time: '1 hari lalu',
-    unread: true,
+    title: 'Sistem Terhubung ke Live API',
+    desc: 'Database tersinkronisasi langsung dengan server produksi api.maximaa.tech.',
+    time: 'Baru saja',
+    unread: false,
     type: 'info'
   }
 ]
 
 let farmSettings = {
-  farmerName: 'Pak Suwanto',
+  farmerName: 'Admin Maxima',
   farmName: 'Desa Bibis, Magetan',
   locationName: 'Kec. Sukomoro, Kab. Magetan, Jawa Timur',
   coordinates: '7°37\'42"S 111°26\'18"E',
-  totalTrees: 88,
+  totalTrees: 0,
   activeVariety: 'Jeruk Bali Merah & Putih',
   notifications: {
     aiAlerts: true,
@@ -354,17 +183,12 @@ export async function deleteAdminFarmer(id) {
   return { success: true }
 }
 
-// ── 3. Public Traceability API ─────────────────────────────
+// ── 3. Public Traceability API (Gatekeeper Evaluated) ──────
 export async function fetchTraceabilityData(identifier = 'healthy') {
-  if (identifier === 'diseased') {
-    return Promise.resolve(MOCK_TRACEABILITY.diseased)
-  }
-
-  if (identifier && identifier !== 'healthy') {
-    const isDiseasedQuery = identifier.toLowerCase().includes('sick') || identifier.toLowerCase().includes('flagged')
-    const isBatchQuery = identifier.toUpperCase().startsWith('BATCH')
-
+  if (identifier && identifier !== 'healthy' && identifier !== 'diseased') {
     const res = await apiRequest(`/api/public/trace/${encodeURIComponent(identifier)}`)
+    const isBatchQuery = identifier.toUpperCase().startsWith('BATCH-') || identifier.includes('-202')
+
     if (res.ok && res.data?.data) {
       const d = res.data.data
       return {
@@ -372,28 +196,28 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
         variety: d.variety || 'Jeruk Bali Merah',
         location: d.location || d.locationBlock || 'Desa Bibis, Magetan',
         coordinates: d.coordinates || '7°37\'42"S 111°26\'18"E',
-        planted: formatDateIndonesian(d.plantingDate) || '10 Jan 2026',
-        farmer: d.farmerName || d.farmer?.name || 'Budi Santoso',
-        batch: d.batchId || (isBatchQuery ? identifier : 'BATCH-BBS001-20260315'),
+        planted: formatDateIndonesian(d.plantingDate) || '-',
+        farmer: d.farmerName || d.farmer?.name || 'Petani Terdaftar',
+        batch: d.batchId || (isBatchQuery ? identifier : 'Batch Terdaftar'),
         certifiedOrganic: d.certifiedOrganic ?? true,
         aiConfidence: Number(d.aiConfidence) || 97.8,
         lastScanned: d.lastScanned || 'Hari ini',
-        harvestDate: formatDateIndonesian(d.harvestDate) || 'Maret 2026',
+        harvestDate: formatDateIndonesian(d.harvestDate) || '-',
         flagged: Boolean(d.flagged) || d.status === 'DITOLAK_MUTU_AI',
         flagReason: d.flagReason || (d.status === 'DITOLAK_MUTU_AI' ? 'Produk tidak lolos verifikasi AI.' : ''),
         flagDetail: d.flagDetail || '',
-        timeline: Array.isArray(d.timeline) && d.timeline.length > 0 ? d.timeline : MOCK_TRACEABILITY.healthy.timeline
+        timeline: Array.isArray(d.timeline) && d.timeline.length > 0 ? d.timeline : []
       }
     } else if (res.data && res.data.warning) {
       const d = res.data.data || {}
       return {
-        id: d.treeCode || d.treeId || 'PHN-BBS-031',
-        variety: 'Jeruk Bali Merah',
-        location: 'Desa Bibis, Magetan',
-        coordinates: '7°37\'42"S 111°26\'18"E',
-        planted: '2026',
+        id: d.treeCode || d.treeId || 'Karantina',
+        variety: d.variety || 'Jeruk Bali Merah',
+        location: d.location || 'Desa Bibis, Magetan',
+        coordinates: d.coordinates || '7°37\'42"S 111°26\'18"E',
+        planted: formatDateIndonesian(d.plantingDate) || '-',
         farmer: 'Petani Terdaftar',
-        batch: d.batchId || (isBatchQuery ? identifier : 'BATCH-SICK-20260320'),
+        batch: d.batchId || identifier,
         certifiedOrganic: false,
         aiConfidence: 91.2,
         lastScanned: 'Hari ini',
@@ -401,20 +225,24 @@ export async function fetchTraceabilityData(identifier = 'healthy') {
         flagged: true,
         flagReason: res.data.warning || 'Produk Ditolak Mutu AI',
         flagDetail: res.data.message || 'Pohon memiliki riwayat penyakit sebelum masa panen.',
-        timeline: MOCK_TRACEABILITY.diseased.timeline
+        timeline: []
       }
     }
 
-    // Dynamic mock fallback when querying specific batch/tree ID
-    const baseMock = isDiseasedQuery ? MOCK_TRACEABILITY.diseased : MOCK_TRACEABILITY.healthy
-    return Promise.resolve({
-      ...baseMock,
-      id: isBatchQuery ? (isDiseasedQuery ? 'PHN-BBS-031' : 'PHN-BBS-001') : identifier,
-      batch: isBatchQuery ? identifier : (isDiseasedQuery ? 'BATCH-SICK-20260320' : 'BATCH-BBS001-20260315')
-    })
+    // If API returned 404 or failed
+    return {
+      notFound: true,
+      identifier: identifier,
+      message: res.data?.message || `Data untuk '${identifier}' tidak ditemukan di database produksi.`
+    }
   }
 
-  return Promise.resolve(MOCK_TRACEABILITY[identifier] || MOCK_TRACEABILITY.healthy)
+  // If someone visits /trace without param, return default placeholder or prompt
+  return {
+    notFound: true,
+    identifier: identifier || '',
+    message: 'Silakan masukkan Nomor Batch atau Kode Pohon untuk menelusuri riwayat panen.'
+  }
 }
 
 // ── 4. Dashboard Overview & Stats API ───────────────────────
@@ -423,10 +251,10 @@ export async function fetchDashboardStats() {
   if (res.ok && res.data?.data) {
     const d = res.data.data
     return [
-      { label: 'Total Pohon', value: String(d.totalTrees ?? 88), sub: '+4 bulan ini', trend: 'up', icon: TreePine, accent: '#7fe030' },
-      { label: 'Pohon Sehat', value: String(d.healthyTrees ?? 85), sub: `${d.healthyPercentage ?? '96.6%'} sehat`, trend: 'up', icon: Leaf, accent: '#5ec412' },
-      { label: 'Terdeteksi Sakit', value: String(d.flaggedTrees ?? 3), sub: (d.flaggedTrees ?? 3) > 0 ? 'Perlu tindakan' : '0 masalah', trend: (d.flaggedTrees ?? 3) > 0 ? 'down' : 'up', icon: ShieldAlert, accent: '#f83b3b' },
-      { label: 'AI Scans', value: String(d.totalAiScans ?? 247), sub: 'scan aktif', trend: 'up', icon: Zap, accent: '#a855f7' },
+      { label: 'Total Pohon', value: String(d.totalTrees ?? 0), sub: 'Pohon terdaftar', trend: 'up', icon: TreePine, accent: '#7fe030' },
+      { label: 'Pohon Sehat', value: String(d.healthyTrees ?? 0), sub: `${d.healthyPercentage ?? '100%'} sehat`, trend: 'up', icon: Leaf, accent: '#5ec412' },
+      { label: 'Terdeteksi Sakit', value: String(d.flaggedTrees ?? 0), sub: (d.flaggedTrees ?? 0) > 0 ? 'Perlu tindakan' : '0 masalah', trend: (d.flaggedTrees ?? 0) > 0 ? 'down' : 'up', icon: ShieldAlert, accent: '#f83b3b' },
+      { label: 'AI Scans', value: String(d.totalAiScans ?? 0), sub: 'scan aktif', trend: 'up', icon: Zap, accent: '#a855f7' },
     ]
   }
 
@@ -435,12 +263,12 @@ export async function fetchDashboardStats() {
   const totalFlagged = treeBatches.reduce((acc, b) => acc + (b.flagged || (b.healthStatus === 'Sakit' ? 1 : 0)), 0)
   const healthyPct = totalCount > 0 ? ((totalHealthy / totalCount) * 100).toFixed(1) : '100'
 
-  return Promise.resolve([
-    { label: 'Total Pohon', value: String(totalCount), sub: '+4 bulan ini', trend: 'up', icon: TreePine, accent: '#7fe030' },
+  return [
+    { label: 'Total Pohon', value: String(totalCount), sub: 'Pohon terdaftar', trend: 'up', icon: TreePine, accent: '#7fe030' },
     { label: 'Pohon Sehat', value: String(totalHealthy), sub: `${healthyPct}% sehat`, trend: 'up', icon: Leaf, accent: '#5ec412' },
     { label: 'Terdeteksi Sakit', value: String(totalFlagged), sub: totalFlagged > 0 ? 'Perlu tindakan' : '0 masalah', trend: totalFlagged > 0 ? 'down' : 'up', icon: ShieldAlert, accent: '#f83b3b' },
-    { label: 'AI Scans', value: String(240 + aiAlerts.length), sub: 'scan aktif', trend: 'up', icon: Zap, accent: '#a855f7' },
-  ])
+    { label: 'AI Scans', value: String(aiAlerts.length), sub: 'scan aktif', trend: 'up', icon: Zap, accent: '#a855f7' },
+  ]
 }
 
 export async function fetchHealthTrend(timeframe = '7m') {
@@ -448,22 +276,7 @@ export async function fetchHealthTrend(timeframe = '7m') {
   if (res.ok && Array.isArray(res.data?.data)) {
     return res.data.data
   }
-
-  if (timeframe === '3m') {
-    return Promise.resolve(MOCK_HEALTH_TREND.slice(-3))
-  }
-  if (timeframe === '1y') {
-    const fullYear = [
-      { month: 'Okt', healthy: 75, flagged: 4 },
-      { month: 'Nov', healthy: 78, flagged: 3 },
-      { month: 'Des', healthy: 80, flagged: 3 },
-      { month: 'Jan', healthy: 80, flagged: 4 },
-      { month: 'Feb', healthy: 81, flagged: 3 },
-      ...MOCK_HEALTH_TREND
-    ]
-    return Promise.resolve(fullYear)
-  }
-  return Promise.resolve(MOCK_HEALTH_TREND)
+  return []
 }
 
 export async function fetchDashboardOverview() {
