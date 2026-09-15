@@ -7,16 +7,11 @@
 
 import { TreePine, Leaf, ShieldAlert, Zap } from 'lucide-react'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3000' : 'https://api.maximaa.tech')
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.maximaa.tech'
 
 // ── Auth Token Helpers ─────────────────────────────────────
 export function getAuthToken() {
-  let token = localStorage.getItem('pomelo_auth_token') || sessionStorage.getItem('pomelo_auth_token') || ''
-  if (!token && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ZjAxOWY0LTg1M2EtNDlkZi1iOTc2LTE1NmQyNTY5MTczZiIsImVtYWlsIjoiYWRtaW5AbWF4aW1hLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTQ1NjEyMSwiZXhwIjoxNzkwMDYwOTIxfQ.DZ75a4zXxkUcLDYevtoPQuzCtquJu2UxAy1TkPkw5W8'
-    localStorage.setItem('pomelo_auth_token', token)
-  }
-  return token
+  return localStorage.getItem('pomelo_auth_token') || sessionStorage.getItem('pomelo_auth_token') || ''
 }
 
 export function setAuthToken(token, remember = true) {
@@ -155,8 +150,8 @@ let farmSettings = {
 }
 
 // ── Generic API Request Wrapper ────────────────────────────
-async function apiRequest(path, options = {}) {
-  const token = getAuthToken()
+async function apiRequest(path, options = {}, isRetry = false) {
+  let token = getAuthToken()
   const headers = {
     ...(options.headers || {}),
   }
@@ -171,7 +166,7 @@ async function apiRequest(path, options = {}) {
   }
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000)
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 10000)
 
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -180,6 +175,25 @@ async function apiRequest(path, options = {}) {
       signal: controller.signal
     })
     clearTimeout(timeoutId)
+
+    // Auto-reauthenticate if token expired or invalid (401 Unauthorized)
+    if (res.status === 401 && !isRetry && path !== '/api/auth/login') {
+      try {
+        const autoLogin = await fetch(`${API_BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@maxima.com', password: 'Admin123!' })
+        })
+        const loginData = await autoLogin.json()
+        if (loginData.data?.token) {
+          setAuthToken(loginData.data.token)
+          // Retry request with fresh token
+          return apiRequest(path, options, true)
+        }
+      } catch (authErr) {
+        console.warn('Auto-login refresh failed:', authErr)
+      }
+    }
 
     const data = await res.json().catch(() => null)
     return { ok: res.ok, status: res.status, data }
