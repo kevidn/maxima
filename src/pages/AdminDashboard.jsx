@@ -2331,182 +2331,146 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
   const activeTree = trees.find(t => (t.dbId || t.id) === selectedTreeId)
 
   return (
-    <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-xs uppercase tracking-wider px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 shadow-xs">
-              <Sparkles size={13} className="text-emerald-700" /> Maxist AI Intelligence Active
-            </span>
-            <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mt-2">
-            Konsultasi & Asisten AI Pomelo
-          </h1>
-          <p className="font-body text-base text-stone-600 mt-1 font-medium">
-            Tanya jawab interaktif seputar hasil deteksi daun, rekomendasi obat & fungisida, takaran pupuk, dan SOP perkebunan.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Link
-            to="/admin/ai-scan"
-            className="btn-action-green text-white font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-xs cursor-pointer min-h-[42px]"
-          >
-            <ScanLine size={16} /> Deteksi Daun Baru
-          </Link>
-          <button
-            onClick={handleResetChat}
-            className="p-2.5 rounded-xl bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 transition-colors cursor-pointer shadow-xs min-h-[42px] min-w-[42px] flex items-center justify-center"
-            title="Reset Percakapan"
-          >
-            <RotateCcw size={17} />
-          </button>
-        </div>
-      </div>
-
-      {/* Active Leaf Context Card if coming from Scan */}
-      {scannedLeafContext && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white border-2 border-emerald-400/80 rounded-3xl p-5 sm:p-6 shadow-md relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-100/50 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              {scannedLeafContext.photoUrl ? (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-stone-200 shrink-0 shadow-sm">
-                  <img src={scannedLeafContext.photoUrl} alt="Foto Daun" className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                  scannedLeafContext.severity === 'high' ? 'bg-red-100 text-red-700 border border-red-200' :
-                  scannedLeafContext.severity === 'medium' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                  'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                }`}>
-                  <Leaf size={28} />
-                </div>
-              )}
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="font-mono text-xs uppercase tracking-wider font-bold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-md border border-forest-200">
-                    Konteks Daun Discan ({scannedLeafContext.treeCode})
-                  </span>
-                  <SeverityBadge level={scannedLeafContext.severity} />
-                  <span className="font-mono text-xs font-bold text-stone-500">
-                    Akurasi: {scannedLeafContext.confidence}%
-                  </span>
-                </div>
-
-                <h3 className="font-heading text-xl sm:text-2xl font-bold text-stone-900">
-                  {scannedLeafContext.disease}
-                </h3>
-                
-                <p className="font-body text-xs sm:text-sm text-stone-600 mt-1 max-w-2xl line-clamp-2">
-                  {scannedLeafContext.advisory || scannedLeafContext.symptoms}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={onClearContext}
-                className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-mono text-xs font-bold transition-colors cursor-pointer"
-                title="Ganti ke mode konsultasi umum"
-              >
-                Lepas Konteks Daun
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Target Tree Context Switcher */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+    <motion.div
+      variants={contentVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex-1 flex flex-col min-h-0 h-full space-y-2.5 sm:space-y-3"
+    >
+      {/* Streamlined Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-2xs shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-forest-800 text-white flex items-center justify-center shrink-0">
-            <TreePine size={20} />
+          <div className="w-10 h-10 rounded-xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Bot size={20} />
           </div>
           <div>
-            <span className="font-mono text-xs uppercase text-forest-700 font-bold block">Pohon Target Konsultasi</span>
-            <p className="font-body text-sm font-semibold text-stone-800">
-              {activeTree ? `${activeTree.treeCode || activeTree.id} · ${activeTree.variety} (${activeTree.location || activeTree.locationBlock})` : 'Pilih pohon untuk menghubungkan riwayat pupuk & log kebun'}
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-xl sm:text-2xl font-bold text-stone-900 leading-tight">
+                Konsultasi & Asisten AI
+              </h1>
+              <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-bold">
+                <Sparkles size={11} className="text-emerald-700" /> Maxist 2.5
+              </span>
+            </div>
+            <p className="font-body text-xs text-stone-500 font-medium">
+              Diagnosis patogen daun, rekomendasi obat fungisida, dan SOP perkebunan jeruk pamelo.
             </p>
           </div>
         </div>
 
-        <select
-          value={selectedTreeId}
-          onChange={(e) => setSelectedTreeId(e.target.value)}
-          className="bg-stone-50 border border-stone-300 rounded-xl px-4 py-2 font-bold text-sm text-stone-900 focus:outline-none focus:border-forest-700 min-w-[220px]"
-        >
-          {trees.map(t => (
-            <option key={t.dbId || t.id} value={t.dbId || t.id}>
-              {t.treeCode || t.id} — {t.location || t.locationBlock} ({t.variety})
-            </option>
-          ))}
-        </select>
+        {/* Tree Selector & Top Actions */}
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-300 rounded-xl px-2.5 py-1.5">
+            <TreePine size={14} className="text-forest-700" />
+            <select
+              value={selectedTreeId}
+              onChange={(e) => setSelectedTreeId(e.target.value)}
+              className="bg-transparent font-bold text-xs text-stone-900 focus:outline-none cursor-pointer max-w-[190px] sm:max-w-[220px]"
+            >
+              {trees.map(t => (
+                <option key={t.dbId || t.id} value={t.dbId || t.id}>
+                  {t.treeCode || t.id} ({t.location || t.locationBlock || 'Kebun'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Link
+            to="/admin/ai-scan"
+            className="btn-action-green text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <ScanLine size={14} /> Scan Baru
+          </Link>
+
+          <button
+            onClick={handleResetChat}
+            className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
+            title="Reset Percakapan"
+          >
+            <RotateCcw size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* Main Chat Interface */}
-      <div className="bg-white border border-stone-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[600px] max-h-[75vh]">
-        {/* Chat Header Bar */}
-        <div className="bg-stone-50 border-b border-stone-200 px-5 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-forest-800 text-white flex items-center justify-center shadow-xs">
-              <Bot size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-bold text-base text-stone-900">Maxist Assistant</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+      {/* Active Leaf Context Card (Compact Ribbon) */}
+      {scannedLeafContext && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-emerald-50/90 border border-emerald-300/90 rounded-2xl p-3 sm:px-4 sm:py-2.5 shadow-2xs shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {scannedLeafContext.photoUrl ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-emerald-300 shrink-0">
+                <img src={scannedLeafContext.photoUrl} alt="Foto Daun" className="w-full h-full object-cover" />
               </div>
-              <span className="font-mono text-[11px] text-stone-500">Live AI Backend https://api.maximaa.tech</span>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-emerald-200 text-emerald-900 flex items-center justify-center shrink-0">
+                <Leaf size={18} />
+              </div>
+            )}
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-[11px] font-bold uppercase text-emerald-900 bg-emerald-200/80 px-2 py-0.5 rounded">
+                  Daun Discan ({scannedLeafContext.treeCode})
+                </span>
+                <span className="font-heading font-bold text-sm sm:text-base text-stone-900 truncate">
+                  {scannedLeafContext.disease}
+                </span>
+                <SeverityBadge level={scannedLeafContext.severity} />
+                <span className="font-mono text-[11px] text-emerald-900 font-semibold">
+                  {scannedLeafContext.confidence}% Akurasi
+                </span>
+              </div>
+              <p className="font-body text-[11px] sm:text-xs text-stone-600 truncate mt-0.5">
+                {scannedLeafContext.advisory || scannedLeafContext.symptoms}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-block font-mono text-xs text-stone-500">
-              {messages.length} pesan dalam sesi
-            </span>
-          </div>
-        </div>
+          <button
+            onClick={onClearContext}
+            className="px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white text-stone-600 hover:text-stone-900 font-mono text-[11px] font-bold border border-emerald-300/80 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+          >
+            Lepas Konteks
+          </button>
+        </motion.div>
+      )}
 
-        {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#fcfbfa]">
+      {/* Main Chat Box — Full Height with Smooth Scroll */}
+      <div className="flex-1 flex flex-col min-h-0 bg-white border border-stone-200 rounded-3xl shadow-xs overflow-hidden">
+        {/* Chat Message Stream */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-5 space-y-4 bg-[#fcfbfa] overscroll-contain">
           {messages.map((m) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-3.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-3 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {m.sender === 'bot' && (
-                <div className="w-9 h-9 rounded-2xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                  <Bot size={18} />
+                <div className="w-8 h-8 rounded-xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                  <Bot size={16} />
                 </div>
               )}
 
               <div
-                className={`max-w-[88%] sm:max-w-[78%] rounded-3xl p-4 sm:p-5 relative group ${
+                className={`max-w-[88%] sm:max-w-[80%] rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 relative group break-words ${
                   m.sender === 'user'
-                    ? 'bg-forest-800 text-white rounded-tr-xs shadow-md'
-                    : 'bg-white border border-stone-200/90 text-stone-900 rounded-tl-xs shadow-sm'
+                    ? 'bg-forest-800 text-white rounded-tr-xs shadow-xs'
+                    : 'bg-white border border-stone-200 text-stone-900 rounded-tl-xs shadow-2xs'
                 }`}
               >
                 {m.sender === 'user' ? (
-                  <p className="font-body text-sm sm:text-base leading-relaxed whitespace-pre-line text-white">
+                  <p className="font-body text-xs sm:text-sm leading-relaxed whitespace-pre-line text-white">
                     {m.text}
                   </p>
                 ) : (
                   <MarkdownMessage content={m.text} />
                 )}
 
-                <div className="flex items-center justify-between gap-4 mt-2.5 pt-1.5 border-t border-stone-100/30">
+                <div className="flex items-center justify-between gap-3 mt-2 pt-1 border-t border-stone-100/40">
                   <span className={`font-mono text-[10px] ${m.sender === 'user' ? 'text-emerald-200' : 'text-stone-400'}`}>
                     {m.time}
                   </span>
@@ -2519,12 +2483,12 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
                     >
                       {copiedId === m.id ? (
                         <>
-                          <Check size={12} className="text-emerald-600" />
+                          <Check size={11} className="text-emerald-600" />
                           <span className="text-emerald-700 font-bold">Tersalin!</span>
                         </>
                       ) : (
                         <>
-                          <Copy size={12} />
+                          <Copy size={11} />
                           <span>Salin</span>
                         </>
                       )}
@@ -2534,8 +2498,8 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
               </div>
 
               {m.sender === 'user' && (
-                <div className="w-9 h-9 rounded-2xl bg-stone-200 text-stone-800 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                  <User size={18} />
+                <div className="w-8 h-8 rounded-xl bg-stone-200 text-stone-800 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                  <User size={16} />
                 </div>
               )}
             </motion.div>
@@ -2545,17 +2509,17 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex gap-3 items-center"
+              className="flex gap-2.5 items-center"
             >
-              <div className="w-9 h-9 rounded-2xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Bot size={18} />
+              <div className="w-8 h-8 rounded-xl bg-forest-800 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Bot size={16} />
               </div>
-              <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-xs px-4 py-3 flex items-center gap-2 shadow-xs">
+              <div className="bg-white border border-stone-200 rounded-2xl rounded-tl-xs px-3.5 py-2.5 flex items-center gap-2 shadow-2xs">
                 <span className="font-body text-xs font-semibold text-stone-600">Maxist sedang menganalisis...</span>
                 <span className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce" />
-                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-2 h-2 rounded-full bg-forest-600 animate-bounce [animation-delay:0.4s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-forest-600 animate-bounce" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-forest-600 animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-forest-600 animate-bounce [animation-delay:0.4s]" />
                 </span>
               </div>
             </motion.div>
@@ -2565,7 +2529,7 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="px-4 py-2.5 bg-stone-50 border-t border-stone-200 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="px-3.5 py-2 bg-stone-50 border-t border-stone-200/90 flex gap-1.5 overflow-x-auto no-scrollbar shrink-0">
           {quickPrompts.map((prompt, i) => (
             <button
               key={i}
@@ -2583,7 +2547,7 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
             e.preventDefault()
             handleSend()
           }}
-          className="p-3 sm:p-4 bg-white border-t border-stone-200 flex items-center gap-2.5"
+          className="p-2.5 sm:p-3 bg-white border-t border-stone-200 flex items-center gap-2 shrink-0"
         >
           <input
             type="text"
@@ -2594,15 +2558,15 @@ function AIConsultationPage({ scannedLeafContext, onClearContext }) {
                 ? `Tanyakan detail cara obat/penanganan untuk daun ${scannedLeafContext.disease}...`
                 : 'Tanyakan rekomendasi dosis obat, pemupukan, atau panduan panen...'
             }
-            className="flex-1 bg-stone-50 border border-stone-300 rounded-2xl px-4 sm:px-5 py-3 text-sm sm:text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
+            className="flex-1 bg-stone-50 border border-stone-300 rounded-xl sm:rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
           />
 
           <button
             type="submit"
             disabled={!inputValue.trim() || isTyping}
-            className="btn-action-green text-white font-bold px-5 sm:px-6 py-3 rounded-2xl flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:hover:opacity-40 shrink-0 min-h-[48px]"
+            className="btn-action-green text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-40 disabled:hover:opacity-40 shrink-0 text-xs sm:text-sm min-h-[42px]"
           >
-            <Send size={18} />
+            <Send size={16} />
             <span className="hidden sm:inline">Kirim</span>
           </button>
         </form>
@@ -3540,7 +3504,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Content Views */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f9f8f5]">
+        <main className={`flex-1 ${location.pathname.startsWith('/admin/chat') ? 'h-full flex flex-col min-h-0 overflow-hidden p-3 sm:p-4' : 'overflow-y-auto p-4 sm:p-6'} bg-[#f9f8f5]`}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route index            element={<DashboardOverview farmSettings={farmSettings} />} />
