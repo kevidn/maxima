@@ -8,10 +8,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { QRCodeSVG } from 'qrcode.react'
 import {
   LayoutDashboard, TreePine, FlaskConical, ScanLine,
-  Settings, ChevronRight, Bell, Menu, X,
+  ChevronRight, Menu, X,
   AlertTriangle, Leaf, Zap, PackageCheck,
   ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Check, Clock, ShieldAlert, QrCode, Search, Filter,
@@ -19,7 +18,8 @@ import {
   Save, CheckCircle2, Calendar, MapPin, User, Building,
   ShieldCheck, Layers, Users, Edit3, Phone, Mail, FileText,
   FileCheck, Sparkles, RefreshCw, MessageSquare, Send,
-  RotateCcw, Bot, MessageCircle, HelpCircle
+  Bot, MessageCircle, HelpCircle, LogOut, LogIn,
+  Camera, CameraOff, SwitchCamera, Upload, RotateCcw
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -47,26 +47,30 @@ import {
   createAdminFarmer,
   updateAdminFarmer,
   deleteAdminFarmer,
-  fetchFarmNotifications,
-  markAllNotificationsRead,
   sendChatMessage,
   getAuthToken,
   setAuthToken,
   removeAuthToken,
+  getAuthUser,
+  setAuthUser,
+  removeAuthUser,
   loginFarmer
 } from '../services/treeService'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import Pagination from '../components/Pagination'
 
-// ── Navigation config ─────────────────────────────────────
-const NAV_ITEMS = [
+// ── Navigation config by Role ─────────────────────────────
+const NAV_ITEMS_ADMIN = [
+  { path: '/admin/harvests', icon: PackageCheck, label: 'Lapor & QR Panen' },
+  { path: '/admin/farmers',  icon: Users,        label: 'Petani Terdaftar' },
+]
+
+const NAV_ITEMS_FARMER = [
   { path: '/admin',           icon: LayoutDashboard, label: 'Dashboard',       exact: true },
   { path: '/admin/trees',     icon: TreePine,        label: 'Pohon & Lahan'   },
   { path: '/admin/fertilize', icon: FlaskConical,    label: 'Jadwal Pupuk'    },
   { path: '/admin/ai-scan',   icon: ScanLine,        label: 'Deteksi AI'      },
   { path: '/admin/chat',      icon: MessageSquare,   label: 'Konsultasi AI'   },
-  { path: '/admin/harvests',  icon: PackageCheck,    label: 'Lapor & QR Panen'},
-  { path: '/admin/farmers',   icon: Users,           label: 'Petani Terdaftar'},
-  { path: '/admin/settings',  icon: Settings,        label: 'Pengaturan'      },
 ]
 
 // ── Animation variants ────────────────────────────────────
@@ -137,113 +141,8 @@ function SeverityBadge({ level }) {
   )
 }
 
-// ── QRCode Modal Component ────────────────────────────────
-function QRCodeModal({ batch, onClose }) {
-  const [copied, setCopied] = useState(false)
-  if (!batch) return null
-
-  const targetId = batch.id || batch.treeCode || 'POM-BBS-0047'
-  const targetUrl = `${window.location.origin}/trace/${targetId}`
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(targetUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handlePrint = () => {
-    window.print()
-  }
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs"
-          onClick={onClose}
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative z-10 w-full max-w-sm max-h-[90vh] flex flex-col bg-white rounded-3xl border border-stone-200 shadow-2xl print-area overflow-hidden"
-        >
-          {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-stone-200 bg-stone-50/80">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-forest-800 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                <QrCode size={20} />
-              </div>
-              <div className="text-left">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-forest-700 font-bold block">
-                  Label Lacak Balak
-                </span>
-                <h3 className="font-sans text-xl font-bold tracking-tight text-stone-900 leading-tight">
-                  {targetId}
-                </h3>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 transition-colors no-print min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer flex-shrink-0"
-              aria-label="Tutup"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-center">
-            <p className="font-body text-sm font-semibold text-stone-600 mb-3">
-              {batch.variety || 'Jeruk Bali Merah'} · {batch.location || 'Kebun Magetan'}
-            </p>
-
-            <div className="bg-white p-3.5 rounded-2xl inline-block shadow-md mx-auto mb-3 border-2 border-stone-200">
-              <QRCodeSVG value={targetUrl} size={150} level="H" includeMargin={true} />
-            </div>
-
-            <div className="font-mono text-xs text-stone-700 break-all bg-stone-50 p-2.5 rounded-xl border border-stone-200 mb-2 font-semibold">
-              {targetUrl}
-            </div>
-
-            <a
-              href={`/trace/${targetId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-forest-700 font-bold uppercase tracking-wider hover:underline no-print py-1 min-h-[36px]"
-            >
-              Buka Halaman Publik <ExternalLink size={13} />
-            </a>
-          </div>
-
-          {/* Footer */}
-          <div className="flex-shrink-0 p-3.5 sm:p-4 bg-stone-50 border-t border-stone-200 grid grid-cols-2 gap-2.5 no-print">
-            <button
-              onClick={handleCopy}
-              className="bg-stone-100 hover:bg-stone-200 border border-stone-200 py-2.5 px-3 rounded-xl font-body text-sm font-bold tracking-wider text-stone-700 hover:text-stone-900 transition-colors flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
-            >
-              <Copy size={16} /> {copied ? 'Tersalin!' : 'Salin Link'}
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className="bg-forest-800 hover:bg-forest-700 py-2.5 px-3 rounded-xl font-body text-sm font-bold tracking-wider text-white shadow-md flex items-center justify-center gap-2 min-h-[44px] cursor-pointer transition-colors"
-            >
-              <Printer size={16} /> Cetak QR
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  )
-}
-
 // ── Batch Detail Modal Component ──────────────────────────
-function BatchDetailModal({ batch, onClose, onOpenQr }) {
+function BatchDetailModal({ batch, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -365,20 +264,12 @@ function BatchDetailModal({ batch, onClose, onOpenQr }) {
             >
               Lihat di Halaman Publik <ExternalLink size={15} />
             </a>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => onOpenQr(batch)}
-                className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 min-h-[44px] flex-1 sm:flex-initial cursor-pointer transition-colors shadow-xs"
-              >
-                <QrCode size={18} /> Label QR
-              </button>
-              <button
-                onClick={onClose}
-                className="bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-sm px-5 py-2.5 rounded-xl min-h-[44px] cursor-pointer transition-colors"
-              >
-                Tutup
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-sm px-6 py-2.5 rounded-xl min-h-[44px] cursor-pointer transition-colors"
+            >
+              Tutup
+            </button>
           </div>
         </motion.div>
       </div>
@@ -831,264 +722,164 @@ function AIAlertDetailModal({ alert, onClose }) {
   )
 }
 
-// ── Auth Modal Component ──────────────────────────────────
-function AuthModal({ onClose, onSuccess }) {
-  const [tab, setTab] = useState('login')
-  const [email, setEmail] = useState('admin@maxima.com')
-  const [password, setPassword] = useState('Admin123!')
-  const [tokenInput, setTokenInput] = useState(getAuthToken())
+// ── Dedicated Direct Login Screen (No Pop-up Modals, No JWT inputs) ──
+function LoginPage({ onLoginSuccess }) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
-
-  const isConnected = Boolean(getAuthToken())
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    if (!username.trim() || !password) {
+      setErrorMsg('Harap isi username dan kata sandi.')
+      return
+    }
     setLoading(true)
     setErrorMsg('')
-    setSuccessMsg('')
 
-    const res = await loginFarmer(email, password)
+    const res = await loginFarmer(username.trim(), password)
     setLoading(false)
 
-    if (res.success) {
-      setSuccessMsg('Berhasil terhubung ke server API https://api.maximaa.tech!')
-      setTimeout(() => {
-        if (onSuccess) onSuccess()
-        onClose()
-      }, 800)
+    if (res.success && res.user) {
+      onLoginSuccess(res.user)
     } else {
-      setErrorMsg(res.message || 'Login gagal. Periksa kembali email dan kata sandi.')
+      setErrorMsg(res.message || 'Login gagal. Periksa kembali username dan kata sandi.')
     }
   }
 
-  const handleSaveToken = () => {
-    if (!tokenInput.trim()) {
-      removeAuthToken()
-      setSuccessMsg('Token dibersihkan. Beralih ke mode offline/mock.')
-    } else {
-      setAuthToken(tokenInput.trim())
-      setSuccessMsg('Token JWT tersimpan!')
-    }
-    setTimeout(() => {
-      if (onSuccess) onSuccess()
-      onClose()
-    }, 600)
-  }
-
-  const handleLogout = () => {
-    removeAuthToken()
-    setSuccessMsg('Sesi telah di-reset.')
-    setTimeout(() => {
-      if (onSuccess) onSuccess()
-      onClose()
-    }, 600)
+  const handlePreset = (u, p) => {
+    setUsername(u)
+    setPassword(p)
+    setErrorMsg('')
   }
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative z-10 w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-stone-200 bg-stone-50/80">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-forest-800 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                <ShieldCheck size={24} />
-              </div>
-              <div>
-                <h3 className="font-heading text-xl sm:text-2xl font-bold text-stone-900">Koneksi API Backend</h3>
-                <p className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold">https://api.maximaa.tech</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-500 cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center">
-              <X size={18} />
-            </button>
+    <div className="min-h-screen bg-[#f4f1ea] flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden">
+      {/* Subtle background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-[#2d6a4f]/15 to-transparent blur-3xl pointer-events-none" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="relative z-10 w-full max-w-md bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden"
+      >
+        {/* Header Branding */}
+        <div className="p-6 sm:p-8 text-center border-b border-stone-100 bg-gradient-to-b from-stone-50/80 to-white">
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4"
+               style={{ background: 'linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)' }}>
+            <span className="font-heading font-bold text-3xl text-white select-none">P</span>
           </div>
+          <h2 className="font-heading text-2xl font-bold text-stone-900">Portal Masuk Maxima</h2>
+          <p className="font-mono text-xs text-forest-700 font-bold tracking-wider uppercase mt-1">
+            Kebun Jeruk Bali · Desa Bibis
+          </p>
+          <p className="font-body text-xs text-stone-500 mt-1">
+            Silakan masukkan username dan kata sandi Anda
+          </p>
+        </div>
 
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
-            {/* Connection Status Badge */}
-            <div className={`p-4 rounded-2xl border flex items-center justify-between ${
-              isConnected ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-stone-50 border-stone-200 text-stone-700'
-            }`}>
-              <div className="flex items-center gap-2.5">
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
-                <span className="font-bold text-sm">{isConnected ? 'Token JWT Aktif Terverifikasi' : 'Belum Login (Mode Mock / Fallback)'}</span>
-              </div>
-              {isConnected && (
-                <button onClick={handleLogout} className="text-xs font-mono font-bold text-red-600 hover:underline cursor-pointer">
-                  Disconnect
-                </button>
-              )}
+        {/* Form Body */}
+        <div className="p-6 sm:p-8 space-y-4">
+          {errorMsg && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block font-body text-xs font-bold text-stone-700 mb-1.5">Username</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Contoh: admin atau petani1"
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 text-sm focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
+              />
             </div>
 
-            {errorMsg && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold">
-                {errorMsg}
-              </div>
-            )}
-            {successMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold">
-                {successMsg}
-              </div>
-            )}
-
-            {/* Mode Switch Tabs */}
-            <div className="flex rounded-xl bg-stone-100 p-1 border border-stone-200">
-              <button
-                type="button"
-                onClick={() => setTab('login')}
-                className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                  tab === 'login' ? 'bg-white text-forest-900 shadow-xs' : 'text-stone-500 hover:text-stone-800'
-                }`}
-              >
-                Login Email & Password
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab('token')}
-                className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                  tab === 'token' ? 'bg-white text-forest-900 shadow-xs' : 'text-stone-500 hover:text-stone-800'
-                }`}
-              >
-                Input JWT Token
-              </button>
+            <div>
+              <label className="block font-body text-xs font-bold text-stone-700 mb-1.5">Kata Sandi</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 text-sm focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
+              />
             </div>
 
-            {tab === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-3.5">
-                <div>
-                  <label className="block font-body text-xs font-bold text-stone-700 mb-1">Email Akun</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@maxima.com"
-                    className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm focus:outline-none focus:border-forest-700"
-                  />
-                </div>
-                <div>
-                  <label className="block font-body text-xs font-bold text-stone-700 mb-1">Kata Sandi</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm focus:outline-none focus:border-forest-700"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setEmail('admin@maxima.com'); setPassword('Admin123!') }}
-                    className="text-[11px] font-mono font-bold text-forest-700 bg-forest-50 border border-forest-200 px-2 py-1 rounded-lg hover:bg-forest-100 cursor-pointer"
-                  >
-                    Preset: Admin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEmail('petani1@maxima.com'); setPassword('Petani123!') }}
-                    className="text-[11px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg hover:bg-amber-100 cursor-pointer"
-                  >
-                    Preset: Petani 1
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-forest-800 hover:bg-forest-700 text-white font-bold py-3 rounded-xl shadow-md min-h-[46px] cursor-pointer mt-2"
-                >
-                  {loading ? 'Menghubungkan...' : 'Login & Ambil Token'}
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-3.5">
-                <div>
-                  <label className="block font-body text-xs font-bold text-stone-700 mb-1">Bearer Token JWT</label>
-                  <textarea
-                    rows="3"
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    className="w-full bg-white border border-stone-300 rounded-xl p-3 font-mono text-xs text-stone-900 focus:outline-none focus:border-forest-700"
-                  />
-                </div>
+            {/* Quick Presets */}
+            <div>
+              <span className="block font-mono text-[10px] text-stone-400 uppercase font-bold tracking-wider mb-1.5">
+                Akses Cepat Pengujian:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={handleSaveToken}
-                  className="w-full bg-forest-800 hover:bg-forest-700 text-white font-bold py-3 rounded-xl shadow-md min-h-[46px] cursor-pointer"
+                  onClick={() => handlePreset('admin', 'Admin123!')}
+                  className="text-[11px] font-mono font-bold text-forest-800 bg-forest-50 border border-forest-200 px-3 py-2 rounded-xl hover:bg-forest-100 transition-colors text-left cursor-pointer"
                 >
-                  Simpan Token
+                  👑 Admin (admin)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePreset('petani1', 'Petani123!')}
+                  className="text-[11px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl hover:bg-amber-100 transition-colors text-left cursor-pointer"
+                >
+                  🧑‍🌾 Petani (petani1)
                 </button>
               </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  )
-}
-
-// ── Notification Flyout Component ─────────────────────────
-function NotificationFlyout({ onClose, onClearAll }) {
-  const [items, setItems] = useState([])
-
-  useEffect(() => {
-    fetchFarmNotifications().then(setItems)
-  }, [])
-
-  const handleClear = async () => {
-    await markAllNotificationsRead()
-    setItems(items.map(i => ({ ...i, unread: false })))
-    if (onClearAll) onClearAll()
-  }
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-start justify-end p-3 sm:p-4 overflow-hidden pointer-events-none">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/20 pointer-events-auto" onClick={onClose} />
-        <motion.div
-          initial={{ opacity: 0, y: -20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          className="relative z-10 w-full max-w-sm bg-white rounded-3xl border border-stone-200 shadow-2xl p-4 sm:p-5 pointer-events-auto mt-16 mr-2"
-        >
-          <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-            <div className="flex items-center gap-2">
-              <Bell size={18} className="text-forest-700" />
-              <h4 className="font-heading text-lg font-bold text-stone-900">Notifikasi Kebun</h4>
             </div>
-            <button onClick={handleClear} className="font-mono text-xs font-bold text-stone-500 hover:text-stone-800 cursor-pointer">
-              Tandai Dibaca
-            </button>
-          </div>
 
-          <div className="divide-y divide-stone-100 max-h-72 overflow-y-auto mt-2">
-            {items.map(n => (
-              <div key={n.id} className="py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-xs text-stone-900">{n.title}</span>
-                  <span className="font-mono text-[10px] text-stone-400">{n.time}</span>
-                </div>
-                <p className="text-xs text-stone-600 leading-relaxed">{n.desc}</p>
-              </div>
-            ))}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-forest-800 hover:bg-forest-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-md min-h-[48px] flex items-center justify-center gap-2 cursor-pointer transition-colors mt-2"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  <span>Memverifikasi...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  <span>Masuk ke Sistem</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Public Trace Link */}
+          <div className="pt-4 border-t border-stone-100 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 font-mono text-xs text-stone-500 hover:text-forest-800 font-bold transition-colors"
+            >
+              <QrCode size={13} />
+              <span>← Kembali ke Halaman Publik Traceability</span>
+            </Link>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
   )
 }
 
 // ── Sidebar Content Component ─────────────────────────────
-function SidebarContent({ location, onNavClick, farmSettings }) {
-  const farmerName = farmSettings?.farmerName || 'Pak Suwanto'
-  const farmName = farmSettings?.farmName || 'Desa Bibis, Magetan'
+function SidebarContent({ location, onNavClick, farmSettings, currentUser, onLogout }) {
+  const role = currentUser?.role || 'admin'
+  const navItems = role === 'admin' ? NAV_ITEMS_ADMIN : NAV_ITEMS_FARMER
+  const displayName = currentUser?.name || (role === 'admin' ? 'Admin Maxima' : 'Budi Santoso')
+  const displayRole = role === 'admin' ? 'Administrator' : 'Petani Pomelo'
+  const displayUsername = currentUser?.username ? `@${currentUser.username}` : (role === 'admin' ? '@admin' : '@petani1')
+  const farmLocation = currentUser?.location || farmSettings?.farmName || 'Desa Bibis, Magetan'
 
   const isActive = (path, exact) => {
     if (exact) return location.pathname === path
@@ -1101,21 +892,23 @@ function SidebarContent({ location, onNavClick, farmSettings }) {
         <PomeloMark />
         <div>
           <div className="font-display text-lg tracking-[0.06em] font-bold text-white">POMELO TRACE</div>
-          <div className="font-mono text-xs tracking-widest uppercase font-semibold text-white/50">Smart Farm Admin</div>
+          <div className="font-mono text-xs tracking-widest uppercase font-semibold text-white/50">
+            {role === 'admin' ? 'Portal Administrator' : 'Portal Petani'}
+          </div>
         </div>
       </div>
 
       <div className="px-4 py-3 mx-3 mt-3 rounded-2xl shrink-0 bg-white/[0.08] border border-white/[0.12]">
-        <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-white/50 mb-0.5">Lokasi Kebun</div>
-        <div className="font-body text-sm font-bold text-white truncate">{farmName}</div>
-        <div className="font-mono text-xs text-white/60 mt-0.5">{farmSettings?.totalTrees || 88} pohon terdata</div>
+        <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-white/50 mb-0.5">Lokasi & Wilayah</div>
+        <div className="font-body text-sm font-bold text-white truncate">{farmLocation}</div>
+        <div className="font-mono text-xs text-white/60 mt-0.5">{displayRole} · {displayUsername}</div>
       </div>
 
       <nav className="flex-1 px-3 mt-3 space-y-1 overflow-y-auto">
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] px-3 mb-1 font-bold text-white/40">
-          Fitur Utama & CRUD
+          Menu {role === 'admin' ? 'Admin' : 'Petani'}
         </div>
-        {NAV_ITEMS.map(({ path, icon: Icon, label, exact }) => {
+        {navItems.map(({ path, icon: Icon, label, exact }) => {
           const active = isActive(path, exact)
           return (
             <Link
@@ -1138,15 +931,30 @@ function SidebarContent({ location, onNavClick, farmSettings }) {
         })}
       </nav>
 
+      {/* Dynamic Profile Tab following logged-in user with prominent Logout button */}
       <div className="mt-auto p-3.5 shrink-0 border-t border-white/[0.10]">
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.07]">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center font-mono text-sm font-bold bg-[#40916c] text-white">
-            {getInitials(farmerName)}
+        <div className="p-3 rounded-2xl bg-white/[0.07] border border-white/[0.08]">
+          <div className="flex items-center gap-2.5 min-w-0 mb-2.5">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold shrink-0 ${
+              role === 'admin' ? 'bg-[#2d6a4f] text-white shadow-xs' : 'bg-[#e76f51] text-white shadow-xs'
+            }`}>
+              {getInitials(displayName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-body text-sm font-bold text-white truncate">{displayName}</div>
+              <div className="font-mono text-[11px] text-white/60 truncate">{displayRole} · {displayUsername}</div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="font-body text-sm font-bold text-white truncate">{farmerName}</div>
-            <div className="font-mono text-[11px] text-white/50">Admin & Petani Kebun</div>
-          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-200 hover:text-white font-body text-xs font-bold transition-colors cursor-pointer"
+            title="Keluar dari sesi portal"
+          >
+            <LogOut size={14} />
+            <span>Keluar (Logout)</span>
+          </button>
         </div>
       </div>
     </>
@@ -1336,11 +1144,12 @@ function TreeBatchesPage() {
   const [batches, setBatches] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [selectedQrBatch, setSelectedQrBatch] = useState(null)
   const [selectedDetailBatch, setSelectedDetailBatch] = useState(null)
   const [editingBatch, setEditingBatch] = useState(null)
   const [deletingBatch, setDeletingBatch] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
 
   const loadBatches = useCallback(() => {
     fetchTreeBatches({ query: searchQuery, status: statusFilter }).then(setBatches)
@@ -1348,7 +1157,11 @@ function TreeBatchesPage() {
 
   useEffect(() => {
     loadBatches()
+    setCurrentPage(1)
   }, [loadBatches])
+
+  const totalPages = Math.ceil(batches.length / itemsPerPage) || 1
+  const paginatedBatches = batches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
@@ -1356,7 +1169,7 @@ function TreeBatchesPage() {
         <div>
           <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">Pohon & Lahan Jeruk Pamelo</h1>
           <p className="font-body text-base text-stone-600 mt-1 font-medium">
-            Manajemen pohon terdaftar, kalkulasi umur, isolasi status mutu, & label QR publik
+            Manajemen pohon terdaftar, kalkulasi umur, dan isolasi status mutu budidaya
           </p>
         </div>
         <button
@@ -1410,88 +1223,87 @@ function TreeBatchesPage() {
           Tidak ada data pohon yang sesuai filter pencarian.
         </div>
       ) : (
-        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-          {batches.map((b) => {
-            const isSick = b.healthStatus === 'Sakit' || b.flagged > 0
-            return (
-              <motion.div key={b.id || b.dbId} variants={staggerItem} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-forest-700/50 transition-all">
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <span className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold block">{b.location || b.locationBlock}</span>
-                      <h3 className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-stone-900 mt-0.5">{b.treeCode || b.id}</h3>
-                      <p className="font-body text-sm font-semibold text-stone-600">{b.variety}</p>
+        <>
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            {paginatedBatches.map((b) => {
+              const isSick = b.healthStatus === 'Sakit' || b.flagged > 0
+              return (
+                <motion.div key={b.id || b.dbId} variants={staggerItem} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-forest-700/50 transition-all">
+                  <div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <span className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold block">{b.location || b.locationBlock}</span>
+                        <h3 className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-stone-900 mt-0.5">{b.treeCode || b.id}</h3>
+                        <p className="font-body text-sm font-semibold text-stone-600">{b.variety}</p>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${
+                        isSick ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      }`}>
+                        {isSick ? 'Sakit' : 'Sehat'}
+                      </span>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${
-                      isSick ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                    }`}>
-                      {isSick ? 'Sakit' : 'Sehat'}
-                    </span>
+
+                    <div className="bg-stone-50 rounded-2xl p-3 space-y-1.5 mb-4 text-xs font-mono text-stone-600">
+                      <div className="flex justify-between">
+                        <span className="text-stone-400">Petani:</span>
+                        <span className="font-bold text-stone-800">{b.farmerName || 'Budi Santoso'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-stone-400">Tgl Tanam:</span>
+                        <span className="font-bold text-stone-800">{b.plantedDate}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-stone-400">Umur:</span>
+                        <span className="font-bold text-stone-800">{b.ageMonths || 8} Bulan</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="bg-stone-50 rounded-2xl p-3 space-y-1.5 mb-4 text-xs font-mono text-stone-600">
-                    <div className="flex justify-between">
-                      <span className="text-stone-400">Petani:</span>
-                      <span className="font-bold text-stone-800">{b.farmerName || 'Budi Santoso'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-stone-400">Tgl Tanam:</span>
-                      <span className="font-bold text-stone-800">{b.plantedDate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-stone-400">Umur:</span>
-                      <span className="font-bold text-stone-800">{b.ageMonths || 8} Bulan</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setSelectedQrBatch(b)}
-                      className="p-2 rounded-xl bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 transition-colors"
-                      title="Label QR"
-                    >
-                      <QrCode size={17} />
-                    </button>
+                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
                     <button
                       onClick={() => setSelectedDetailBatch(b)}
-                      className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors"
-                      title="Detail Pohon"
+                      className="p-2 rounded-xl bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                      title="Lihat Rincian Pohon"
                     >
-                      <Eye size={17} />
+                      <Eye size={16} /> Rincian
                     </button>
-                  </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setEditingBatch(b)}
-                      className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors"
-                      title="Edit Data Pohon"
-                    >
-                      <Edit3 size={17} />
-                    </button>
-                    <button
-                      onClick={() => setDeletingBatch(b)}
-                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors"
-                      title="Hapus Pohon"
-                    >
-                      <Trash2 size={17} />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setEditingBatch(b)}
+                        className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors"
+                        title="Edit Data Pohon"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingBatch(b)}
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors"
+                        title="Hapus Pohon"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </motion.div>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={batches.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
-      {selectedQrBatch && <QRCodeModal batch={selectedQrBatch} onClose={() => setSelectedQrBatch(null)} />}
       {selectedDetailBatch && (
         <BatchDetailModal
           batch={selectedDetailBatch}
           onClose={() => setSelectedDetailBatch(null)}
-          onOpenQr={(b) => { setSelectedDetailBatch(null); setSelectedQrBatch(b) }}
         />
       )}
       {showAddModal && <AddBatchModal onClose={() => setShowAddModal(false)} onSuccess={loadBatches} />}
@@ -1507,6 +1319,8 @@ function FertilizerManagementPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
 
   const loadData = useCallback(() => {
     fetchFertilizerSchedule({ query: searchQuery, status: statusFilter }).then(setSchedules)
@@ -1514,7 +1328,11 @@ function FertilizerManagementPage() {
 
   useEffect(() => {
     loadData()
+    setCurrentPage(1)
   }, [loadData])
+
+  const totalPages = Math.ceil(schedules.length / itemsPerPage) || 1
+  const paginatedSchedules = schedules.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const handleToggle = async (id) => {
     await toggleFertilizerStatus(id)
@@ -1602,7 +1420,7 @@ function FertilizerManagementPage() {
                   </td>
                 </tr>
               ) : (
-                schedules.map((f) => (
+                paginatedSchedules.map((f) => (
                   <tr key={f.id || f.dbId} className="hover:bg-stone-50/70 transition-colors">
                     <td className="py-3.5 px-3 font-sans font-bold tracking-tight text-forest-800 text-sm">
                       {f.treeCode || f.id}
@@ -1655,6 +1473,14 @@ function FertilizerManagementPage() {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={schedules.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {showAddModal && (
@@ -1745,6 +1571,236 @@ function AddFertilizerModal({ onClose, onSuccess }) {
   )
 }
 
+// ── Live Camera Scanner Modal ──────────────────────────────
+function CameraScannerModal({ isOpen, onClose, onCapture }) {
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const [stream, setStream] = useState(null)
+  const [facingMode, setFacingMode] = useState('environment') // Default back camera for mobile
+  const [cameraError, setCameraError] = useState('')
+  const [isInitializing, setIsInitializing] = useState(true)
+
+  const stopTracks = useCallback(() => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+  }, [stream])
+
+  const startCamera = useCallback(async (mode) => {
+    stopTracks()
+    setIsInitializing(true)
+    setCameraError('')
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser tidak mendukung akses kamera langsung.')
+      }
+      const constraints = {
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      }
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints)
+      setStream(newStream)
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream
+      }
+    } catch (err) {
+      console.error('Camera error:', err)
+      setCameraError(
+        err.name === 'NotAllowedError'
+          ? 'Izin kamera ditolak. Harap izinkan akses kamera di pengaturan browser Anda.'
+          : 'Kamera tidak dapat diakses atau sedang digunakan aplikasi lain.'
+      )
+    } finally {
+      setIsInitializing(false)
+    }
+  }, [stopTracks])
+
+  useEffect(() => {
+    if (isOpen) {
+      startCamera(facingMode)
+    } else {
+      stopTracks()
+    }
+    return () => {
+      stopTracks()
+    }
+  }, [isOpen, facingMode, startCamera, stopTracks])
+
+  const handleSwitchCamera = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment'
+    setFacingMode(nextMode)
+    startCamera(nextMode)
+  }
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+
+    if (facingMode === 'user') {
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `scan_daun_kamera_${Date.now()}.jpg`, { type: 'image/jpeg' })
+        stopTracks()
+        onCapture(file)
+        onClose()
+      }
+    }, 'image/jpeg', 0.92)
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+          onClick={() => {
+            stopTracks()
+            onClose()
+          }}
+        />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative z-10 w-full max-w-lg bg-stone-900 text-white rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-stone-900/90">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-forest-700 text-white flex items-center justify-center shadow-md">
+                <Camera size={20} />
+              </div>
+              <div>
+                <h3 className="font-heading text-lg sm:text-xl font-bold text-white">Kamera Scanner Daun</h3>
+                <p className="font-mono text-[11px] text-emerald-400 font-bold uppercase">
+                  {facingMode === 'environment' ? 'Kamera Belakang (HP)' : 'Kamera Depan / Webcam'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                stopTracks()
+                onClose()
+              }}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Video Viewfinder */}
+          <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[380px]">
+            {cameraError ? (
+              <div className="p-6 text-center max-w-sm">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
+                  <CameraOff size={24} />
+                </div>
+                <h4 className="font-heading text-lg font-bold text-white mb-1">Gagal Membuka Kamera</h4>
+                <p className="font-body text-xs text-stone-400 leading-relaxed mb-4">{cameraError}</p>
+                <button
+                  type="button"
+                  onClick={() => startCamera(facingMode)}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold font-mono transition-colors cursor-pointer"
+                >
+                  Coba Lagi
+                </button>
+              </div>
+            ) : (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${facingMode === 'user' ? '-scale-x-100' : ''}`}
+                />
+
+                {/* Viewfinder Frame Overlay */}
+                <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
+                  <div className="relative w-64 h-64 sm:w-72 sm:h-72 border-2 border-dashed border-emerald-400/70 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+                    {/* Corner Reticles */}
+                    <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                    <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
+                    {/* Scanning Laser Line */}
+                    <motion.div
+                      animate={{ y: [0, 240, 0] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_8px_#34d399]"
+                    />
+                  </div>
+                  <span className="mt-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full font-mono text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
+                    Arahkan daun jeruk ke dalam kotak
+                  </span>
+                </div>
+              </>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+
+          {/* Controls Footer */}
+          <div className="p-4 sm:p-5 bg-stone-950 border-t border-white/10 flex items-center justify-between gap-3">
+            {/* Switch Camera Button (for phones/devices with multiple cameras) */}
+            <button
+              type="button"
+              onClick={handleSwitchCamera}
+              disabled={Boolean(cameraError)}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white transition-colors flex items-center gap-2 text-xs font-mono font-bold cursor-pointer"
+              title="Ganti Kamera Depan/Belakang"
+            >
+              <SwitchCamera size={18} />
+              <span className="hidden sm:inline">Ganti Kamera</span>
+            </button>
+
+            {/* Shutter Button */}
+            <button
+              type="button"
+              onClick={handleCapturePhoto}
+              disabled={Boolean(cameraError) || isInitializing}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-sm transition-all shadow-lg hover:shadow-emerald-500/30 cursor-pointer"
+            >
+              <Camera size={20} />
+              <span>Ambil Foto Daun</span>
+            </button>
+
+            {/* Cancel Button */}
+            <button
+              type="button"
+              onClick={() => {
+                stopTracks()
+                onClose()
+              }}
+              className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors text-xs font-bold cursor-pointer"
+            >
+              Batal
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
+
 // ── 4. AI Leaf Disease Detection & Logs (FR-5) ────────────
 function AIScanPage({ onScanComplete }) {
   const [alerts, setAlerts] = useState([])
@@ -1755,7 +1811,11 @@ function AIScanPage({ onScanComplete }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [latestResult, setLatestResult] = useState(null)
   const [selectedAlertDetail, setSelectedAlertDetail] = useState(null)
+  const [showCameraModal, setShowCameraModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const fileInputRef = useRef(null)
+  const nativeCameraInputRef = useRef(null)
   const navigate = useNavigate()
 
   const loadAlerts = useCallback(() => {
@@ -1764,6 +1824,7 @@ function AIScanPage({ onScanComplete }) {
 
   useEffect(() => {
     loadAlerts()
+    setCurrentPage(1)
     fetchTreeBatches().then(res => {
       setTrees(res)
       if (res.length > 0 && !selectedTreeId) {
@@ -1771,6 +1832,9 @@ function AIScanPage({ onScanComplete }) {
       }
     })
   }, [loadAlerts])
+
+  const totalPages = Math.ceil(alerts.length / itemsPerPage) || 1
+  const paginatedAlerts = alerts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const processAnalysis = async (file = null) => {
     setIsAnalyzing(true)
@@ -1780,6 +1844,7 @@ function AIScanPage({ onScanComplete }) {
     setLatestResult(result)
     loadAlerts()
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (nativeCameraInputRef.current) nativeCameraInputRef.current.value = ''
 
     // If diagnosis succeeds, notify context & auto-navigate to Chatbot Consultation page
     if (result && !result.error) {
@@ -1827,11 +1892,13 @@ function AIScanPage({ onScanComplete }) {
         </span>
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mt-2">Deteksi Penyakit AI</h1>
         <p className="font-body text-base text-stone-600 mt-1 font-medium">
-          Verifikasi foto daun jeruk bali, diagnosis patogen, dan otomatisasi konsultasi ke Asisten AI Maxist
+          Ambil foto daun via kamera HP / Laptop atau unggah foto, diagnosis otomatis penyakit botani jeruk bali.
         </p>
       </div>
 
+      {/* Hidden File & Native Camera Inputs */}
       <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileChange} className="hidden" />
+      <input type="file" ref={nativeCameraInputRef} accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
 
       {/* Target Tree Selector */}
       <div className="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -1917,10 +1984,10 @@ function AIScanPage({ onScanComplete }) {
         )
       )}
 
-      {/* Upload zone */}
+      {/* Upload & Camera Trigger Zone */}
       <motion.div
         variants={staggerItem}
-        className={`border-2 border-dashed rounded-3xl p-7 sm:p-10 text-center transition-all shadow-xs relative overflow-hidden ${
+        className={`border-2 border-dashed rounded-3xl p-6 sm:p-9 text-center transition-all shadow-xs relative overflow-hidden ${
           isAnalyzing ? 'border-amber-400 bg-amber-50/60' : 'border-forest-200 hover:border-forest-400 bg-emerald-50/30'
         }`}
       >
@@ -1942,37 +2009,57 @@ function AIScanPage({ onScanComplete }) {
           </div>
         ) : (
           <div>
-            <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer group">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 bg-forest-800 text-white shadow-md group-hover:scale-105 transition-transform">
-                <ScanLine size={32} />
-              </div>
-              <h3 className="font-heading text-2xl font-bold text-stone-900 mb-1 group-hover:text-forest-700 transition-colors">
-                Unggah Foto Daun Jeruk
-              </h3>
-              <p className="font-body text-sm text-stone-500 font-medium max-w-md mx-auto">
-                Pilih foto daun langsung dari galeri atau kamera ponsel untuk mendeteksi HLB, Algal Spot, Kudis, atau Daun Sehat.
-              </p>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 bg-forest-800 text-white shadow-md">
+              <Camera size={32} />
             </div>
+            <h3 className="font-heading text-2xl font-bold text-stone-900 mb-1">
+              Pindai & Deteksi Daun Jeruk
+            </h3>
+            <p className="font-body text-sm text-stone-500 font-medium max-w-md mx-auto">
+              Gunakan kamera langsung dari HP / Webcam Laptop atau pilih file foto daun untuk mendeteksi penyakit tanaman secara akurat.
+            </p>
 
-            <div className="mt-5 pt-4 border-t border-stone-200/80 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-6 pt-5 border-t border-stone-200/80 flex flex-wrap items-center justify-center gap-3">
+              {/* Single Unified Camera Button */}
+              <button
+                type="button"
+                onClick={() => setShowCameraModal(true)}
+                className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2.5 cursor-pointer shadow-md min-h-[46px] transition-all hover:scale-102"
+              >
+                <Camera size={19} />
+                <span>Buka Kamera</span>
+              </button>
+
+              {/* Gallery / File Picker */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-action-green text-white font-bold text-sm px-6 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer shadow-md min-h-[44px]"
+                className="bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-bold text-sm px-5 py-3 rounded-2xl flex items-center gap-2 cursor-pointer transition-colors min-h-[46px]"
               >
-                <Plus size={18} /> Pilih File Foto Daun
+                <Upload size={18} />
+                <span>Pilih dari Galeri</span>
               </button>
+
+              {/* Quick Simulation */}
               <button
                 type="button"
                 onClick={() => processAnalysis()}
-                className="bg-amber-700 hover:bg-amber-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer shadow-md min-h-[44px]"
+                className="bg-amber-700 hover:bg-amber-600 text-white font-bold text-sm px-4 py-3 rounded-2xl flex items-center gap-2 cursor-pointer shadow-md min-h-[46px]"
               >
-                <Zap size={18} /> Uji Coba Simulasi Cepat
+                <Zap size={18} />
+                <span>Simulasi Cepat</span>
               </button>
             </div>
           </div>
         )}
       </motion.div>
+
+      {/* Live Camera Scanner Modal */}
+      <CameraScannerModal
+        isOpen={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onCapture={(file) => processAnalysis(file)}
+      />
 
       {/* Search & Filter Bar */}
       <div className="bg-white border border-stone-200 rounded-2xl p-3.5 sm:p-4 flex flex-col md:flex-row items-center gap-3.5 shadow-xs">
@@ -2017,35 +2104,45 @@ function AIScanPage({ onScanComplete }) {
             Belum ada riwayat deteksi yang sesuai filter.
           </div>
         ) : (
-          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
-            {alerts.map((a) => (
-              <motion.div
-                key={a.id || a.dbId}
-                variants={staggerItem}
-                onClick={() => setSelectedAlertDetail(a)}
-                className="bg-white border border-stone-200 hover:border-forest-700/60 p-4 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-xs"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    a.severity === 'high' ? 'bg-red-100 text-red-700 border border-red-200' :
-                    a.severity === 'medium' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                    'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  }`}>
-                    <AlertTriangle size={20} />
+          <>
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
+              {paginatedAlerts.map((a) => (
+                <motion.div
+                  key={a.id || a.dbId}
+                  variants={staggerItem}
+                  onClick={() => setSelectedAlertDetail(a)}
+                  className="bg-white border border-stone-200 hover:border-forest-700/60 p-4 rounded-2xl flex items-center justify-between gap-4 cursor-pointer transition-all shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      a.severity === 'high' ? 'bg-red-100 text-red-700 border border-red-200' :
+                      a.severity === 'medium' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    }`}>
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs font-bold text-stone-500">{a.treeCode || a.id} · {a.batch}</div>
+                      <div className="font-heading text-base sm:text-lg font-bold text-stone-900 truncate">{a.disease}</div>
+                      <div className="font-mono text-xs text-stone-500">Keyakinan: {a.confidence}% · {a.time}</div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-mono text-xs font-bold text-stone-500">{a.treeCode || a.id} · {a.batch}</div>
-                    <div className="font-heading text-base sm:text-lg font-bold text-stone-900 truncate">{a.disease}</div>
-                    <div className="font-mono text-xs text-stone-500">Keyakinan: {a.confidence}% · {a.time}</div>
+                  <div className="flex items-center gap-2">
+                    <SeverityBadge level={a.severity} />
+                    <div className="p-2 rounded-xl bg-stone-100 text-stone-600 hidden sm:flex"><Eye size={16} /></div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <SeverityBadge level={a.severity} />
-                  <div className="p-2 rounded-xl bg-stone-100 text-stone-600 hidden sm:flex"><Eye size={16} /></div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={alerts.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 
@@ -2482,6 +2579,8 @@ function HarvestsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showReportModal, setShowReportModal] = useState(false)
   const [verifyingHarvest, setVerifyingHarvest] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
 
   const loadData = useCallback(() => {
     fetchAdminHarvests({ query: searchQuery, status: statusFilter }).then(setHarvests)
@@ -2489,8 +2588,12 @@ function HarvestsPage() {
 
   useEffect(() => {
     loadData()
+    setCurrentPage(1)
     fetchTreeBatches().then(setTrees)
   }, [loadData])
+
+  const totalPages = Math.ceil(harvests.length / itemsPerPage) || 1
+  const paginatedHarvests = harvests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
@@ -2563,7 +2666,7 @@ function HarvestsPage() {
                   </td>
                 </tr>
               ) : (
-                harvests.map((h) => {
+                paginatedHarvests.map((h) => {
                   const isVerified = h.status === 'Verified'
                   return (
                     <tr key={h.id} className="hover:bg-stone-50/70 transition-colors">
@@ -2640,6 +2743,14 @@ function HarvestsPage() {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={harvests.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {showReportModal && (
@@ -2833,6 +2944,8 @@ function FarmersPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingFarmer, setEditingFarmer] = useState(null)
   const [deletingFarmer, setDeletingFarmer] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
 
   const loadFarmers = useCallback(() => {
     fetchAdminFarmers().then(setFarmers)
@@ -2840,13 +2953,18 @@ function FarmersPage() {
 
   useEffect(() => {
     loadFarmers()
+    setCurrentPage(1)
   }, [loadFarmers])
 
   const filtered = farmers.filter(f =>
     f.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.location?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1
+  const paginatedFarmers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6">
@@ -2870,7 +2988,7 @@ function FarmersPage() {
         <Search size={18} className="text-stone-400" />
         <input
           type="text"
-          placeholder="Cari nama petani, email, atau lokasi blok kebun..."
+          placeholder="Cari nama petani, username, atau lokasi blok kebun..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-transparent text-stone-900 text-sm focus:outline-none"
@@ -2881,66 +2999,82 @@ function FarmersPage() {
       </div>
 
       {/* Grid of Farmers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-        {filtered.map(f => (
-          <div key={f.id} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-forest-700/50 transition-all">
-            <div>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-forest-800 text-white flex items-center justify-center font-mono font-bold text-lg shadow-md">
-                    {getInitials(f.name)}
+      {filtered.length === 0 ? (
+        <div className="bg-white border border-stone-200 rounded-3xl p-10 text-center text-stone-500 font-medium">
+          Tidak ada data petani terdaftar yang sesuai filter.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            {paginatedFarmers.map(f => (
+              <div key={f.id} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-forest-700/50 transition-all">
+                <div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-forest-800 text-white flex items-center justify-center font-mono font-bold text-lg shadow-md">
+                        {getInitials(f.name)}
+                      </div>
+                      <div>
+                        <h3 className="font-heading text-lg font-bold text-stone-900 leading-tight">{f.name}</h3>
+                        <span className="font-mono text-xs text-forest-700 font-bold">@{f.username || 'petani'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-heading text-lg font-bold text-stone-900 leading-tight">{f.name}</h3>
-                    <span className="font-mono text-xs text-forest-700 font-bold uppercase">{f.role || 'Petani'}</span>
+
+                  <div className="bg-stone-50 rounded-2xl p-3 space-y-1.5 mb-4 text-xs font-mono text-stone-600">
+                    <div className="flex items-center gap-2">
+                      <User size={13} className="text-stone-400" />
+                      <span className="text-stone-800 font-semibold">Username: @{f.username || 'petani'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone size={13} className="text-stone-400" />
+                      <span className="text-stone-800">{f.phone || '-'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={13} className="text-stone-400" />
+                      <span className="text-stone-800">{f.location || 'Desa Bibis, Magetan'}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                      <div className="font-heading text-lg font-bold text-emerald-900">{f.treeCount ?? 0}</div>
+                      <div className="font-mono text-[10px] text-emerald-700 uppercase font-bold">Pohon Dikelola</div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-center">
+                      <div className="font-heading text-lg font-bold text-purple-900">{f.harvestCount ?? 0}</div>
+                      <div className="font-mono text-[10px] text-purple-700 uppercase font-bold">Laporan Panen</div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-stone-50 rounded-2xl p-3 space-y-1.5 mb-4 text-xs font-mono text-stone-600">
-                <div className="flex items-center gap-2">
-                  <Mail size={13} className="text-stone-400" />
-                  <span className="text-stone-800 font-semibold">{f.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone size={13} className="text-stone-400" />
-                  <span className="text-stone-800">{f.phone || '-'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={13} className="text-stone-400" />
-                  <span className="text-stone-800">{f.location || 'Desa Bibis, Magetan'}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
-                  <div className="font-heading text-lg font-bold text-emerald-900">{f.treeCount ?? 0}</div>
-                  <div className="font-mono text-[10px] text-emerald-700 uppercase font-bold">Pohon Dikelola</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-center">
-                  <div className="font-heading text-lg font-bold text-purple-900">{f.harvestCount ?? 0}</div>
-                  <div className="font-mono text-[10px] text-purple-700 uppercase font-bold">Laporan Panen</div>
+                <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setEditingFarmer(f)}
+                    className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Edit3 size={15} /> Edit
+                  </button>
+                  <button
+                    onClick={() => setDeletingFarmer(f)}
+                    className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Trash2 size={15} /> Hapus
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="pt-3 border-t border-stone-100 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setEditingFarmer(f)}
-                className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1.5"
-              >
-                <Edit3 size={15} /> Edit
-              </button>
-              <button
-                onClick={() => setDeletingFarmer(f)}
-                className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold flex items-center gap-1.5"
-              >
-                <Trash2 size={15} /> Hapus
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </>
+      )}
 
       {showAddModal && <AddFarmerModal onClose={() => setShowAddModal(false)} onSuccess={loadFarmers} />}
       {editingFarmer && <EditFarmerModal farmer={editingFarmer} onClose={() => setEditingFarmer(null)} onSuccess={loadFarmers} />}
@@ -2952,8 +3086,8 @@ function FarmersPage() {
 function AddFarmerModal({ onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: 'Password123!',
+    username: '',
+    password: 'Petani123!',
     phone: '08123456789',
     location: 'Desa Bibis, Blok Utara'
   })
@@ -2985,19 +3119,19 @@ function AddFarmerModal({ onClose, onSuccess }) {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Pak Joko"
+                placeholder="Contoh: Pak Joko"
                 className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Email</label>
+              <label className="block text-xs font-bold text-stone-700 mb-1">Username Akun</label>
               <input
-                type="email"
+                type="text"
                 required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="joko@maxima.com"
-                className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                placeholder="Contoh: pak_joko atau joko123"
+                className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm font-mono"
               />
             </div>
             <div>
@@ -3044,6 +3178,7 @@ function AddFarmerModal({ onClose, onSuccess }) {
 function EditFarmerModal({ farmer, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     name: farmer?.name || '',
+    username: farmer?.username || '',
     phone: farmer?.phone || '',
     location: farmer?.location || ''
   })
@@ -3076,6 +3211,15 @@ function EditFarmerModal({ farmer, onClose, onSuccess }) {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">Username</label>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-stone-900 text-sm font-mono"
               />
             </div>
             <div>
@@ -3130,7 +3274,7 @@ function DeleteFarmerModal({ farmer, onClose, onSuccess }) {
           </div>
           <h3 className="font-heading text-xl font-bold text-stone-900 mb-2">Hapus Akun Petani?</h3>
           <p className="font-body text-sm text-stone-600 mb-6">
-            Akun <span className="font-bold text-stone-900">{farmer?.name}</span> ({farmer?.email}) akan dihapus dari sistem.
+            Akun <span className="font-bold text-stone-900">{farmer?.name}</span> (@{farmer?.username || 'petani'}) akan dihapus dari sistem.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={onClose} className="px-4 py-2.5 rounded-xl font-bold bg-stone-100 text-stone-700 hover:bg-stone-200">Batal</button>
@@ -3144,142 +3288,61 @@ function DeleteFarmerModal({ farmer, onClose, onSuccess }) {
   )
 }
 
-// ── 7. Settings Page ──────────────────────────────────────
-function SettingsPage({ onSettingsUpdate }) {
-  const [settings, setSettings] = useState(null)
-  const [saved, setSaved] = useState(false)
-  const isConnected = Boolean(getAuthToken())
-
-  useEffect(() => {
-    fetchFarmSettings().then(setSettings)
-  }, [])
-
-  if (!settings) return null
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    const updated = await updateFarmSettings(settings)
-    setSaved(true)
-    if (onSettingsUpdate) onSettingsUpdate(updated)
-    setTimeout(() => setSaved(false), 2500)
-  }
-
-  return (
-    <motion.div variants={contentVariants} initial="hidden" animate="visible" className="space-y-5 sm:space-y-6 max-w-4xl">
-      <div>
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">Pengaturan Kebun & Sesi</h1>
-        <p className="font-body text-base text-stone-600 mt-1 font-medium">
-          Konfigurasi profil kebun jeruk pamelo, notifikasi, dan status koneksi API backend
-        </p>
-      </div>
-
-      {saved && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-sm flex items-center gap-2">
-          <CheckCircle2 size={18} /> Pengaturan berhasil disimpan!
-        </div>
-      )}
-
-      {/* API Connection Banner */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <span className="font-mono text-xs uppercase tracking-wider text-forest-700 font-bold block">Status Integrasi Backend</span>
-          <h3 className="font-heading text-xl font-bold text-stone-900 mt-0.5">https://api.maximaa.tech</h3>
-          <p className="font-body text-xs text-stone-500 mt-0.5">
-            {isConnected ? 'Terhubung dengan JWT Token Bearer (Akses Penuh CRUD Admin & Petani)' : 'Belum terautentikasi (Beralih ke local fallback)'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold ${
-            isConnected ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-stone-100 text-stone-600'
-          }`}>
-            {isConnected ? '● Connected' : '○ Standby'}
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-5">
-        <div className="bg-white border border-stone-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-          <h3 className="font-heading text-xl font-bold text-stone-900 pb-3 border-b border-stone-100">Profil Perkebunan</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Nama Pengelola</label>
-              <input
-                type="text"
-                value={settings.farmerName}
-                onChange={(e) => setSettings({ ...settings, farmerName: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2.5 text-stone-900 text-sm focus:border-forest-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Nama Kebun / Desa</label>
-              <input
-                type="text"
-                value={settings.farmName}
-                onChange={(e) => setSettings({ ...settings, farmName: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2.5 text-stone-900 text-sm focus:border-forest-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Lokasi Administrasi</label>
-              <input
-                type="text"
-                value={settings.locationName}
-                onChange={(e) => setSettings({ ...settings, locationName: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2.5 text-stone-900 text-sm focus:border-forest-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Koordinat GPS Kebun</label>
-              <input
-                type="text"
-                value={settings.coordinates}
-                onChange={(e) => setSettings({ ...settings, coordinates: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-2.5 text-stone-900 text-sm focus:border-forest-700"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="btn-action-green text-white font-bold px-8 py-3 rounded-2xl flex items-center gap-2 shadow-md"
-          >
-            <Save size={18} /> Simpan Perubahan Profil
-          </button>
-        </div>
-      </form>
-    </motion.div>
-  )
-}
-
 // ── Main Shell ────────────────────────────────────────────
 export default function AdminDashboard() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [notifications, setNotifications] = useState(3)
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const [farmSettings, setFarmSettings] = useState(null)
-  const [hasToken, setHasToken] = useState(Boolean(getAuthToken()))
   const [scannedLeafContext, setScannedLeafContext] = useState(null)
-
-  const updateNotifCount = useCallback(() => {
-    fetchFarmNotifications().then(items => {
-      const unread = items.filter(i => i.unread).length
-      setNotifications(unread)
-    })
-  }, [])
+  const [currentUser, setCurrentUser] = useState(() => {
+    return getAuthUser() || {
+      id: 'admin-01',
+      name: 'Admin Maxima',
+      username: 'admin',
+      role: 'admin',
+      location: 'Magetan Pusat'
+    }
+  })
 
   useEffect(() => {
     fetchFarmSettings().then(setFarmSettings)
-    updateNotifCount()
-    setHasToken(Boolean(getAuthToken()))
-  }, [updateNotifCount])
+    const storedUser = getAuthUser()
+    if (storedUser) {
+      setCurrentUser(storedUser)
+    }
+  }, [])
 
   useEffect(() => { setSidebarOpen(false) }, [location.pathname])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+
+  const handleLoginSuccess = (user) => {
+    if (user) {
+      setCurrentUser(user)
+      if (user.role === 'admin') {
+        navigate('/admin/harvests')
+      } else {
+        navigate('/admin')
+      }
+    }
+  }
+
+  const handleLogout = () => {
+    removeAuthToken()
+    removeAuthUser()
+    setCurrentUser(null)
+    navigate('/admin')
+  }
+
+  // If user is logged out, render the direct Login Page without popup modals
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />
+  }
+
+  const isAdmin = currentUser?.role === 'admin'
+  const activeNavList = isAdmin ? NAV_ITEMS_ADMIN : NAV_ITEMS_FARMER
+  const currentNav = activeNavList.find(n => n.exact ? location.pathname === n.path : location.pathname.startsWith(n.path))
 
   const sidebarBg = {
     background: 'linear-gradient(180deg, #1b4332 0%, #0d2b1d 100%)',
@@ -3290,7 +3353,13 @@ export default function AdminDashboard() {
     <div className="flex h-screen overflow-hidden bg-white">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 xl:w-72 flex-shrink-0 sidebar-wrap z-20" style={sidebarBg}>
-        <SidebarContent location={location} onNavClick={closeSidebar} farmSettings={farmSettings} />
+        <SidebarContent
+          location={location}
+          onNavClick={closeSidebar}
+          farmSettings={farmSettings}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Mobile Drawer */}
@@ -3321,7 +3390,13 @@ export default function AdminDashboard() {
               >
                 <X size={16} />
               </button>
-              <SidebarContent location={location} onNavClick={closeSidebar} farmSettings={farmSettings} />
+              <SidebarContent
+                location={location}
+                onNavClick={closeSidebar}
+                farmSettings={farmSettings}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+              />
             </motion.aside>
           </>
         )}
@@ -3352,44 +3427,26 @@ export default function AdminDashboard() {
           <div className="hidden lg:flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-stone-400">
             <span>Pomelo Trace</span>
             <ChevronRight size={11} />
+            <span className="text-forest-800 font-bold bg-forest-50 px-2 py-0.5 rounded">
+              {isAdmin ? 'Mode Admin' : 'Mode Petani'}
+            </span>
+            <ChevronRight size={11} />
             <span className="text-stone-700 font-medium">
-              {NAV_ITEMS.find(n => n.exact ? location.pathname === n.path : location.pathname.startsWith(n.path))?.label ?? 'Dashboard'}
+              {currentNav?.label ?? (isAdmin ? 'Lapor & QR Panen' : 'Dashboard')}
             </span>
           </div>
 
           <div className="lg:hidden font-heading text-lg text-stone-800 ml-3">
-            {NAV_ITEMS.find(n => n.exact ? location.pathname === n.path : location.pathname.startsWith(n.path))?.label ?? 'Dashboard'}
+            {currentNav?.label ?? (isAdmin ? 'Lapor & QR Panen' : 'Dashboard')}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-            {/* API Auth Button */}
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-colors cursor-pointer min-h-[40px] ${
-                hasToken
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                  : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200 hover:text-stone-900'
-              }`}
-              title="Kelola Autentikasi API https://api.maximaa.tech"
-            >
-              <ShieldCheck size={15} className={hasToken ? 'text-emerald-600' : 'text-stone-400'} />
-              <span className="hidden sm:inline">{hasToken ? 'API Terhubung' : 'API Auth'}</span>
-            </button>
-
-            {/* Notification Bell */}
-            <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.94 }}
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
-              title="Notifikasi Kebun"
-            >
-              <Bell size={16} className="text-stone-500" />
-              {notifications > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center font-mono text-[8px] text-white font-bold bg-red-600">
-                  {notifications}
-                </span>
-              )}
-            </motion.button>
+            {/* User Badge / Role Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-stone-200 bg-stone-50 text-xs">
+              <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-forest-600' : 'bg-amber-600'}`} />
+              <span className="font-bold text-stone-800">{currentUser?.name}</span>
+              <span className="font-mono text-[10px] text-stone-500 uppercase font-semibold">({currentUser?.role})</span>
+            </div>
 
             {/* Public trace button */}
             <Link
@@ -3402,37 +3459,30 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* Content Views */}
+        {/* Content Views — Conditional by Role */}
         <main className={`flex-1 ${location.pathname.startsWith('/admin/chat') ? 'h-full flex flex-col min-h-0 overflow-hidden p-3 sm:p-4' : 'overflow-y-auto p-4 sm:p-6'} bg-[#f9f8f5]`}>
           <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
-              <Route index            element={<DashboardOverview farmSettings={farmSettings} />} />
-              <Route path="trees"     element={<TreeBatchesPage />} />
-              <Route path="fertilize" element={<FertilizerManagementPage />} />
-              <Route path="ai-scan"   element={<AIScanPage onScanComplete={(ctx) => setScannedLeafContext(ctx)} />} />
-              <Route path="chat"      element={<AIConsultationPage scannedLeafContext={scannedLeafContext} onClearContext={() => setScannedLeafContext(null)} />} />
-              <Route path="harvests"  element={<HarvestsPage />} />
-              <Route path="farmers"   element={<FarmersPage />} />
-              <Route path="settings"  element={<SettingsPage onSettingsUpdate={setFarmSettings} />} />
-              <Route path="*"         element={<Navigate to="/admin" replace />} />
-            </Routes>
+            {isAdmin ? (
+              // ── Admin Pages: Lapor & QR Panen, Petani Terdaftar ──
+              <Routes location={location} key="admin-routes">
+                <Route path="harvests" element={<HarvestsPage />} />
+                <Route path="farmers"  element={<FarmersPage />} />
+                <Route path="*"        element={<Navigate to="/admin/harvests" replace />} />
+              </Routes>
+            ) : (
+              // ── Petani Pages: Dashboard, Pohon & Lahan, Jadwal Pupuk, Deteksi AI, Konsultasi AI ──
+              <Routes location={location} key="farmer-routes">
+                <Route index            element={<DashboardOverview farmSettings={farmSettings} />} />
+                <Route path="trees"     element={<TreeBatchesPage />} />
+                <Route path="fertilize" element={<FertilizerManagementPage />} />
+                <Route path="ai-scan"   element={<AIScanPage onScanComplete={(ctx) => setScannedLeafContext(ctx)} />} />
+                <Route path="chat"      element={<AIConsultationPage scannedLeafContext={scannedLeafContext} onClearContext={() => setScannedLeafContext(null)} />} />
+                <Route path="*"         element={<Navigate to="/admin" replace />} />
+              </Routes>
+            )}
           </AnimatePresence>
         </main>
       </div>
-
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setHasToken(Boolean(getAuthToken()))}
-        />
-      )}
-
-      {showNotifications && (
-        <NotificationFlyout
-          onClose={() => setShowNotifications(false)}
-          onClearAll={() => setNotifications(0)}
-        />
-      )}
     </div>
   )
 }
