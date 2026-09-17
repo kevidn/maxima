@@ -62,16 +62,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Action Buttons: Halaman Publik & Login Admin */}
+          {/* Action Button: Login Admin / Dashboard */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => navigate('/trace/BATCH-BBS001-20260315')}
-              className="px-4 py-2.5 rounded-xl border border-[#2d6a4f]/30 bg-white text-[#1b4332] font-semibold text-sm hover:bg-[#eef7f1] hover:border-[#2d6a4f] transition-all flex items-center gap-2 shadow-xs"
-            >
-              <QrCode className="w-4 h-4 text-[#2d6a4f]" />
-              <span className="hidden xs:inline">Halaman</span> Publik
-            </button>
-
             <button
               onClick={() => navigate(isLoggedIn ? '/admin' : '/login')}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#1b4332] to-[#2d6a4f] text-white font-semibold text-sm hover:opacity-95 transition-all flex items-center gap-2 shadow-md shadow-[#1b4332]/15 hover:shadow-lg"

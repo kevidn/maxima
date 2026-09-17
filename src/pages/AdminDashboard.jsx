@@ -61,8 +61,12 @@ import Pagination from '../components/Pagination'
 
 // ── Navigation config by Role ─────────────────────────────
 const NAV_ITEMS_ADMIN = [
-  { path: '/admin/harvests', icon: PackageCheck, label: 'Lapor & QR Panen' },
-  { path: '/admin/farmers',  icon: Users,        label: 'Petani Terdaftar' },
+  { path: '/admin',           icon: LayoutDashboard, label: 'Dashboard',       exact: true },
+  { path: '/admin/trees',     icon: TreePine,        label: 'Pohon & Lahan'   },
+  { path: '/admin/fertilize', icon: FlaskConical,    label: 'Jadwal Pupuk'    },
+  { path: '/admin/ai-scan',   icon: ScanLine,        label: 'Deteksi AI'      },
+  { path: '/admin/harvests',  icon: PackageCheck,    label: 'Lapor & QR Panen'},
+  { path: '/admin/farmers',   icon: Users,           label: 'Petani Terdaftar'},
 ]
 
 const NAV_ITEMS_FARMER = [
@@ -3320,11 +3324,7 @@ export default function AdminDashboard() {
   const handleLoginSuccess = (user) => {
     if (user) {
       setCurrentUser(user)
-      if (user.role === 'admin') {
-        navigate('/admin/harvests')
-      } else {
-        navigate('/admin')
-      }
+      navigate('/admin')
     }
   }
 
@@ -3432,12 +3432,12 @@ export default function AdminDashboard() {
             </span>
             <ChevronRight size={11} />
             <span className="text-stone-700 font-medium">
-              {currentNav?.label ?? (isAdmin ? 'Lapor & QR Panen' : 'Dashboard')}
+              {currentNav?.label ?? 'Dashboard'}
             </span>
           </div>
 
           <div className="lg:hidden font-heading text-lg text-stone-800 ml-3">
-            {currentNav?.label ?? (isAdmin ? 'Lapor & QR Panen' : 'Dashboard')}
+            {currentNav?.label ?? 'Dashboard'}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 ml-auto">
@@ -3473,11 +3473,15 @@ export default function AdminDashboard() {
         <main className={`flex-1 ${location.pathname.startsWith('/admin/chat') ? 'h-full flex flex-col min-h-0 overflow-hidden p-3 sm:p-4' : 'overflow-y-auto p-4 sm:p-6'} bg-[#f9f8f5]`}>
           <AnimatePresence mode="wait">
             {isAdmin ? (
-              // ── Admin Pages: Lapor & QR Panen, Petani Terdaftar ──
+              // ── Admin Pages: Dashboard, Pohon & Lahan, Jadwal Pupuk, Deteksi AI, Lapor & QR Panen, Petani Terdaftar ──
               <Routes location={location} key="admin-routes">
-                <Route path="harvests" element={<HarvestsPage />} />
-                <Route path="farmers"  element={<FarmersPage />} />
-                <Route path="*"        element={<Navigate to="/admin/harvests" replace />} />
+                <Route index            element={<DashboardOverview farmSettings={farmSettings} />} />
+                <Route path="trees"     element={<TreeBatchesPage />} />
+                <Route path="fertilize" element={<FertilizerManagementPage />} />
+                <Route path="ai-scan"   element={<AIScanPage onScanComplete={(ctx) => setScannedLeafContext(ctx)} />} />
+                <Route path="harvests"  element={<HarvestsPage />} />
+                <Route path="farmers"   element={<FarmersPage />} />
+                <Route path="*"         element={<Navigate to="/admin" replace />} />
               </Routes>
             ) : (
               // ── Petani Pages: Dashboard, Pohon & Lahan, Jadwal Pupuk, Deteksi AI, Konsultasi AI ──
