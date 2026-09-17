@@ -3450,12 +3450,22 @@ export default function AdminDashboard() {
 
             {/* Public trace button */}
             <Link
-              to="/"
-              className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl transition-all duration-200 min-h-[44px] whitespace-nowrap shrink-0 bg-forest-800 hover:bg-forest-700 text-white"
+              to="/trace/BATCH-BBS001-20260315"
+              className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl transition-all duration-200 min-h-[44px] whitespace-nowrap shrink-0 border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 shadow-xs"
             >
-              <QrCode size={15} />
+              <QrCode size={15} className="text-[#2d6a4f]" />
               <span className="text-xs">Halaman Publik</span>
             </Link>
+
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl transition-all duration-200 min-h-[44px] whitespace-nowrap shrink-0 bg-red-600 hover:bg-red-700 text-white shadow-xs cursor-pointer"
+              title="Keluar / Logout"
+            >
+              <LogOut size={15} />
+              <span className="text-xs">Keluar</span>
+            </button>
           </div>
         </header>
 
