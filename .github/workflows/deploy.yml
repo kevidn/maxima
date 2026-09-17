@@ -31,9 +31,9 @@ jobs:
             git pull origin main
 
             echo "🐳 Rebuild & Restart Docker container..."
-            docker compose down app
-            docker compose build --no-cache app
-            docker compose up -d app
+            docker compose down frontend
+            docker compose build --no-cache frontend
+            docker compose up -d frontend
 
             echo "⏳ Menunggu container siap..."
             sleep 8
