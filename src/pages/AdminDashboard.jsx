@@ -19,7 +19,7 @@ import {
   ShieldCheck, Layers, Users, Edit3, Phone, Mail, FileText,
   FileCheck, Sparkles, RefreshCw, MessageSquare, Send,
   Bot, MessageCircle, HelpCircle, LogOut, LogIn,
-  Camera, CameraOff, SwitchCamera, Upload, RotateCcw
+  Camera, Upload, RotateCcw
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -1522,236 +1522,6 @@ function AddFertilizerModal({ onClose, onSuccess }) {
   )
 }
 
-// ── Live Camera Scanner Modal ──────────────────────────────
-function CameraScannerModal({ isOpen, onClose, onCapture }) {
-  const videoRef = useRef(null)
-  const canvasRef = useRef(null)
-  const [stream, setStream] = useState(null)
-  const [facingMode, setFacingMode] = useState('environment') // Default back camera for mobile
-  const [cameraError, setCameraError] = useState('')
-  const [isInitializing, setIsInitializing] = useState(true)
-
-  const stopTracks = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
-    }
-  }, [stream])
-
-  const startCamera = useCallback(async (mode) => {
-    stopTracks()
-    setIsInitializing(true)
-    setCameraError('')
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Browser tidak mendukung akses kamera langsung.')
-      }
-      const constraints = {
-        video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      }
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints)
-      setStream(newStream)
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream
-      }
-    } catch (err) {
-      console.error('Camera error:', err)
-      setCameraError(
-        err.name === 'NotAllowedError'
-          ? 'Izin kamera ditolak. Harap izinkan akses kamera di pengaturan browser Anda.'
-          : 'Kamera tidak dapat diakses atau sedang digunakan aplikasi lain.'
-      )
-    } finally {
-      setIsInitializing(false)
-    }
-  }, [stopTracks])
-
-  useEffect(() => {
-    if (isOpen) {
-      startCamera(facingMode)
-    } else {
-      stopTracks()
-    }
-    return () => {
-      stopTracks()
-    }
-  }, [isOpen, facingMode, startCamera, stopTracks])
-
-  const handleSwitchCamera = () => {
-    const nextMode = facingMode === 'environment' ? 'user' : 'environment'
-    setFacingMode(nextMode)
-    startCamera(nextMode)
-  }
-
-  const handleCapturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    canvas.width = video.videoWidth || 640
-    canvas.height = video.videoHeight || 480
-    const ctx = canvas.getContext('2d')
-
-    if (facingMode === 'user') {
-      ctx.translate(canvas.width, 0)
-      ctx.scale(-1, 1)
-    }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `scan_daun_kamera_${Date.now()}.jpg`, { type: 'image/jpeg' })
-        stopTracks()
-        onCapture(file)
-        onClose()
-      }
-    }, 'image/jpeg', 0.92)
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-          onClick={() => {
-            stopTracks()
-            onClose()
-          }}
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative z-10 w-full max-w-lg bg-stone-900 text-white rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
-        >
-          {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-stone-900/90">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-forest-700 text-white flex items-center justify-center shadow-md">
-                <Camera size={20} />
-              </div>
-              <div>
-                <h3 className="font-heading text-lg sm:text-xl font-bold text-white">Kamera Scanner Daun</h3>
-                <p className="font-mono text-[11px] text-emerald-400 font-bold uppercase">
-                  {facingMode === 'environment' ? 'Kamera Belakang (HP)' : 'Kamera Depan / Webcam'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                stopTracks()
-                onClose()
-              }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Video Viewfinder */}
-          <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[380px]">
-            {cameraError ? (
-              <div className="p-6 text-center max-w-sm">
-                <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
-                  <CameraOff size={24} />
-                </div>
-                <h4 className="font-heading text-lg font-bold text-white mb-1">Gagal Membuka Kamera</h4>
-                <p className="font-body text-xs text-stone-400 leading-relaxed mb-4">{cameraError}</p>
-                <button
-                  type="button"
-                  onClick={() => startCamera(facingMode)}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold font-mono transition-colors cursor-pointer"
-                >
-                  Coba Lagi
-                </button>
-              </div>
-            ) : (
-              <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover ${facingMode === 'user' ? '-scale-x-100' : ''}`}
-                />
-
-                {/* Viewfinder Frame Overlay */}
-                <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
-                  <div className="relative w-64 h-64 sm:w-72 sm:h-72 border-2 border-dashed border-emerald-400/70 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
-                    {/* Corner Reticles */}
-                    <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
-                    <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
-                    <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
-                    {/* Scanning Laser Line */}
-                    <motion.div
-                      animate={{ y: [0, 240, 0] }}
-                      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_8px_#34d399]"
-                    />
-                  </div>
-                  <span className="mt-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full font-mono text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
-                    Arahkan daun jeruk ke dalam kotak
-                  </span>
-                </div>
-              </>
-            )}
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
-
-          {/* Controls Footer */}
-          <div className="p-4 sm:p-5 bg-stone-950 border-t border-white/10 flex items-center justify-between gap-3">
-            {/* Switch Camera Button (for phones/devices with multiple cameras) */}
-            <button
-              type="button"
-              onClick={handleSwitchCamera}
-              disabled={Boolean(cameraError)}
-              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white transition-colors flex items-center gap-2 text-xs font-mono font-bold cursor-pointer"
-              title="Ganti Kamera Depan/Belakang"
-            >
-              <SwitchCamera size={18} />
-              <span className="hidden sm:inline">Ganti Kamera</span>
-            </button>
-
-            {/* Shutter Button */}
-            <button
-              type="button"
-              onClick={handleCapturePhoto}
-              disabled={Boolean(cameraError) || isInitializing}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-sm transition-all shadow-lg hover:shadow-emerald-500/30 cursor-pointer"
-            >
-              <Camera size={20} />
-              <span>Ambil Foto Daun</span>
-            </button>
-
-            {/* Cancel Button */}
-            <button
-              type="button"
-              onClick={() => {
-                stopTracks()
-                onClose()
-              }}
-              className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors text-xs font-bold cursor-pointer"
-            >
-              Batal
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  )
-}
-
 // ── 4. AI Leaf Disease Detection & Logs (FR-5) ────────────
 function AIScanPage({ onScanComplete }) {
   const [alerts, setAlerts] = useState([])
@@ -1762,7 +1532,6 @@ function AIScanPage({ onScanComplete }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [latestResult, setLatestResult] = useState(null)
   const [selectedAlertDetail, setSelectedAlertDetail] = useState(null)
-  const [showCameraModal, setShowCameraModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const fileInputRef = useRef(null)
@@ -1971,10 +1740,10 @@ function AIScanPage({ onScanComplete }) {
             </p>
 
             <div className="mt-6 pt-5 border-t border-stone-200/80 flex flex-wrap items-center justify-center gap-3">
-              {/* Single Unified Camera Button */}
+              {/* Native Camera App Button */}
               <button
                 type="button"
-                onClick={() => setShowCameraModal(true)}
+                onClick={() => nativeCameraInputRef.current?.click()}
                 className="bg-forest-800 hover:bg-forest-700 text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2.5 cursor-pointer shadow-md min-h-[46px] transition-all hover:scale-102"
               >
                 <Camera size={19} />
@@ -2004,13 +1773,6 @@ function AIScanPage({ onScanComplete }) {
           </div>
         )}
       </motion.div>
-
-      {/* Live Camera Scanner Modal */}
-      <CameraScannerModal
-        isOpen={showCameraModal}
-        onClose={() => setShowCameraModal(false)}
-        onCapture={(file) => processAnalysis(file)}
-      />
 
       {/* Search & Filter Bar */}
       <div className="bg-white border border-stone-200 rounded-2xl p-3.5 sm:p-4 flex flex-col md:flex-row items-center gap-3.5 shadow-xs">
