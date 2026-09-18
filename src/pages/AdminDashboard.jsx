@@ -728,12 +728,6 @@ function LoginPage({ onLoginSuccess }) {
     }
   }
 
-  const handlePreset = (u, p) => {
-    setUsername(u)
-    setPassword(p)
-    setErrorMsg('')
-  }
-
   return (
     <div className="min-h-screen bg-[#f4f1ea] flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden">
       {/* Subtle background glow */}
@@ -777,7 +771,7 @@ function LoginPage({ onLoginSuccess }) {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Contoh: admin atau petani1"
+                placeholder="Masukkan username Anda"
                 className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 text-sm focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
               />
             </div>
@@ -792,29 +786,6 @@ function LoginPage({ onLoginSuccess }) {
                 placeholder="••••••••"
                 className="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 text-sm focus:outline-none focus:border-forest-700 focus:bg-white transition-colors"
               />
-            </div>
-
-            {/* Quick Presets */}
-            <div>
-              <span className="block font-mono text-[10px] text-stone-400 uppercase font-bold tracking-wider mb-1.5">
-                Akses Cepat Pengujian:
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handlePreset('admin', 'Admin123!')}
-                  className="text-[11px] font-mono font-bold text-forest-800 bg-forest-50 border border-forest-200 px-3 py-2 rounded-xl hover:bg-forest-100 transition-colors text-left cursor-pointer"
-                >
-                  👑 Admin (admin)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePreset('petani1', 'Petani123!')}
-                  className="text-[11px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl hover:bg-amber-100 transition-colors text-left cursor-pointer"
-                >
-                  🧑‍🌾 Petani (petani1)
-                </button>
-              </div>
             </div>
 
             <button

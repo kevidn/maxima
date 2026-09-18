@@ -21,7 +21,7 @@ export default function LoginPage() {
   // Where user was trying to go before redirecting to login
   const from = location.state?.from?.pathname || '/admin'
 
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
@@ -32,8 +32,8 @@ export default function LoginPage() {
 
   const handleLoginSubmit = async (e) => {
     e?.preventDefault()
-    if (!email || !password) {
-      setErrorMessage('Silakan isi email dan kata sandi Anda.')
+    if (!username.trim() || !password) {
+      setErrorMessage('Silakan isi username dan kata sandi Anda.')
       return
     }
 
@@ -42,28 +42,22 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const res = await loginFarmer(email, password)
+      const res = await loginFarmer(username.trim(), password)
       if (res.success && res.token) {
         setAuthToken(res.token, remember)
-        setSuccessMessage(`Login berhasil! Selamat datang kembali, ${res.user?.name || 'Admin'}.`)
+        setSuccessMessage(`Login berhasil! Selamat datang kembali, ${res.user?.name || 'Pengguna'}.`)
         
         setTimeout(() => {
           navigate(from, { replace: true })
         }, 600)
       } else {
-        setErrorMessage(res.message || 'Kombinasi email atau kata sandi tidak valid.')
+        setErrorMessage(res.message || 'Kombinasi username atau kata sandi tidak valid.')
       }
     } catch (err) {
       setErrorMessage('Terjadi kesalahan koneksi ke server. Silakan coba beberapa saat lagi.')
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleAutofill = (demoEmail, demoPassword) => {
-    setEmail(demoEmail)
-    setPassword(demoPassword)
-    setErrorMessage('')
   }
 
   return (
@@ -148,15 +142,15 @@ export default function LoginPage() {
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#1c1917] mb-1.5 uppercase tracking-wider">
-                  Alamat Email
+                  Username Akun
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-[#78716c] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <User className="w-4 h-4 text-[#78716c] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@maxima.com"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Masukkan username Anda"
                     required
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#f9f8f5] border border-[#e7e5e4] text-[#1c1917] text-sm placeholder-[#a8a29e] focus:outline-none focus:border-[#2d6a4f] focus:ring-2 focus:ring-[#74c69d]/30 transition-all font-mono"
                   />
@@ -222,53 +216,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Demo Quick Autofill Chips */}
-            <div className="mt-6 pt-5 border-t border-[#f0ede6]">
-              <p className="text-[11px] font-bold text-[#78716c] uppercase tracking-wider mb-2.5">
-                Kredensial Pengujian (Autofill Cepat):
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAutofill('admin@maxima.com', 'Admin123!')}
-                  className="p-2.5 rounded-xl bg-[#eef7f1] hover:bg-[#d8f3dc] border border-[#74c69d]/40 text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-bold text-[#0d2b1d]">Admin</span>
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#2d6a4f]" />
-                  </div>
-                  <p className="text-[10px] text-[#44403c] font-mono">admin@maxima.com</p>
-                  <p className="text-[9px] text-[#78716c] font-mono mt-0.5">Admin123!</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleAutofill('petani1@maxima.com', 'Petani123!')}
-                  className="p-2.5 rounded-xl bg-[#f9f8f5] hover:bg-[#eef7f1] border border-[#e7e5e4] text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-bold text-[#0d2b1d]">Petani 1</span>
-                    <User className="w-3.5 h-3.5 text-[#78716c]" />
-                  </div>
-                  <p className="text-[10px] text-[#44403c] font-mono">petani1@maxima.com</p>
-                  <p className="text-[9px] text-[#78716c] font-mono mt-0.5">Petani123!</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleAutofill('petani2@maxima.com', 'Petani123!')}
-                  className="p-2.5 rounded-xl bg-[#f9f8f5] hover:bg-[#eef7f1] border border-[#e7e5e4] text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-bold text-[#0d2b1d]">Petani 2</span>
-                    <User className="w-3.5 h-3.5 text-[#78716c]" />
-                  </div>
-                  <p className="text-[10px] text-[#44403c] font-mono">petani2@maxima.com</p>
-                  <p className="text-[9px] text-[#78716c] font-mono mt-0.5">Petani123!</p>
-                </button>
-              </div>
-            </div>
           </motion.div>
         </div>
       </main>
