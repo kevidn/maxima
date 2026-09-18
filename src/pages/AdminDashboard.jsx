@@ -243,10 +243,6 @@ function BatchDetailModal({ batch, onClose }) {
                 <span className="text-stone-800 font-bold">{batch.plantedDate || '10 Jan 2026'}</span>
               </div>
               <div className="flex items-center justify-between font-mono text-xs sm:text-sm">
-                <span className="text-stone-500">Koordinat GPS:</span>
-                <span className="text-stone-800 font-bold">{batch.coordinates || '7°37\'42"S 111°26\'18"E'}</span>
-              </div>
-              <div className="flex items-center justify-between font-mono text-xs sm:text-sm">
                 <span className="text-stone-500">Sertifikasi Organik:</span>
                 <span className="text-emerald-700 font-bold">✓ Terverifikasi Standar Desa Bibis</span>
               </div>
@@ -417,17 +413,6 @@ function AddBatchModal({ onClose, onSuccess }) {
                 </select>
               </div>
 
-              <div>
-                <label className="block font-body text-sm font-bold text-stone-800 mb-1.5">
-                  Koordinat GPS Lahan
-                </label>
-                <input
-                  type="text"
-                  value={formData.coordinates}
-                  onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
-                  className="w-full bg-white border border-stone-300 rounded-xl px-4 py-3 font-body text-base text-stone-900 focus:outline-none focus:border-forest-700 focus:ring-2 focus:ring-forest-600/20 transition-all"
-                />
-              </div>
             </div>
 
             {/* Footer */}
@@ -554,15 +539,6 @@ function EditBatchModal({ batch, onClose, onSuccess }) {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-body text-sm font-bold text-stone-800 mb-1.5">Koordinat GPS</label>
-                <input
-                  type="text"
-                  value={formData.coordinates}
-                  onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
-                  className="w-full bg-white border border-stone-300 rounded-xl px-4 py-3 font-body text-base text-stone-900 focus:outline-none focus:border-forest-700 focus:ring-2 focus:ring-forest-600/20"
-                />
-              </div>
             </div>
 
             <div className="flex-shrink-0 p-4 sm:p-5 bg-stone-50 border-t border-stone-200 flex items-center justify-end gap-3">

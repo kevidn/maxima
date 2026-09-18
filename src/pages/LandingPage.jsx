@@ -191,7 +191,7 @@ export default function LandingPage() {
                   <ul className="space-y-2 mb-8 text-xs text-[#44403c]">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-[#2d6a4f] shrink-0" />
-                      <span>Lokasi GPS & Koordinat Presisi Kebun</span>
+                      <span>Lokasi Kebun & Blok Perkebunan Magetan</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-[#2d6a4f] shrink-0" />
